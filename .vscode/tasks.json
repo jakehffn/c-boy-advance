@@ -12,9 +12,23 @@
             },
             "problemMatcher": [],
             "group": {
+                "kind": "build"
+            }
+        },
+        {
+            "label": "Build for Web and Run",
+            "type": "shell",
+            "command": "npm run start",
+            "options": {
+                "cwd": "${workspaceFolder}/web"
+            },
+            "group": {
                 "kind": "build",
                 "isDefault": true
-            }
+            },
+            "dependsOn":[
+                "Build for Web"
+            ]
         }
     ]
 }

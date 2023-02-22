@@ -19,22 +19,7 @@ const char* fragment_shader_source = "#version 300 es\n"
         "FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);\n"
     "}\0";
 
-int main() {
-
-    EmscriptenWebGLContextAttributes attr;
-    emscripten_webgl_init_context_attributes(&attr);
-    attr.alpha = 0;
-    attr.majorVersion = 2;
-    attr.minorVersion = 0;
-
-
-    // printf("GL_VERSION=%s\n", glGetString(GL_VERSION));
-
-    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context("#canvas", &attr);
-    emscripten_webgl_make_context_current(ctx);
-
-    glClearColor(0.5, 0.5, 0.2, 1.0);
-    glClear(GL_COLOR_BUFFER_BIT);
+void drawToCanvas() {
 
     float vertices[] = {
         -0.5f, -0.5f, 0.0f,
@@ -97,9 +82,35 @@ int main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);  
 
+    // glBindVertexArray(0);
+
+    glClearColor(0.5, 0.2, 0.5, 1.0);
+    glClear(GL_COLOR_BUFFER_BIT);
+
+    glBindVertexArray(VAO);
     glUseProgram(shader_program);
 
     glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    return 1;
+    glBindVertexArray(0);
+    glUseProgram(0);
+}
+
+int main() {
+
+    EmscriptenWebGLContextAttributes attr;
+    emscripten_webgl_init_context_attributes(&attr);
+    attr.alpha = 0;
+    attr.majorVersion = 2;
+    attr.minorVersion = 0;
+
+
+    // printf("GL_VERSION=%s\n", glGetString(GL_VERSION));
+
+    EMSCRIPTEN_WEBGL_CONTEXT_HANDLE ctx = emscripten_webgl_create_context("#canvas", &attr);
+
+    emscripten_webgl_make_context_current(ctx);
+    drawToCanvas();
+
+    return 0;
 }
