@@ -4,31 +4,149 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "Build for Web",
+            "label": "Build All Targets",
             "type": "shell",
-            "command": "emcc graphics/src/main.c -o web/public/age.js -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2",
+            "command": "python -m http.server 8000",
             "options": {
-                "cwd": "${workspaceFolder}"
-            },
-            "problemMatcher": [],
-            "group": {
-                "kind": "build"
-            }
-        },
-        {
-            "label": "Build for Web and Run",
-            "type": "shell",
-            "command": "npm run start",
-            "options": {
-                "cwd": "${workspaceFolder}/web"
+                "cwd": "${workspaceFolder}/build/web/debug"
             },
             "group": {
                 "kind": "build",
                 "isDefault": true
             },
             "dependsOn":[
-                "Build for Web"
+                "Build Web Target",
+				"Execute Makefile x86 (debug)"
             ]
+        },
+        {
+			"type": "shell",
+			"label": "Execute Makefile x86 (debug)",
+			"command": "mingw32-make",
+			"options": {
+				"cwd": "${workspaceFolder}/build/x86/debug"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+        {
+			"type": "shell",
+			"label": "Run CMake x86 (debug)",
+			"command": "cmake",
+			"args": [
+				"-DCMAKE_BUILD_TYPE=Debug",
+				"../../..",
+				"-G",
+				"MinGW Makefiles"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/x86/debug"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+        {
+			"type": "shell",
+			"label": "Execute Ninja Web (debug)",
+			"command": "ninja",
+            "args": [
+                "-C",
+				"."
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/web/debug"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			}
+		},
+        {
+			"type": "shell",
+			"label": "Run CMake Web (debug)",
+			"command": "cmake",
+			"args": [
+				"-DCMAKE_BUILD_TYPE=Debug",
+				"-G",
+				"Ninja",
+				"../../..",
+                "-DCMAKE_TOOLCHAIN_FILE=${env:EMSCRIPTEN}/cmake/Modules/Platform/Emscripten.cmake"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/web/debug"
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "dedicated",
+				"showReuseMessage": true,
+				"clear": false
+			}
+		},
+		{
+			"type": "shell",
+			"label": "Build Web Target",
+			"command": "xcopy",
+			"args": [
+				"/y",
+				"${workspaceFolder}\\web",
+				"${workspaceFolder}\\build\\web\\debug",
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/web/debug"
+			},
+			"dependsOn": [
+				"Execute Ninja Web (debug)"
+			]
+		},
+		{
+			"type": "shell",
+			"label": "Open Browser",
+			"command": "explorer",
+			"args": [
+				"http://127.0.0.1:8000"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/web/debug"
+			}
+		},
+		{
+            "type": "shell",
+            "label": "Serve Web Target",
+            "command": "python",
+			"args": [
+				"-m",
+				"http.server",
+				"8000"
+			],
+			"options": {
+				"cwd": "${workspaceFolder}/build/web/debug"
+			},
+            "presentation": {
+                "reveal": "always",
+                "panel": "new"
+            },
+			"isBackground": true,
+			"dependsOn": [
+				"Open Browser"
+			]
         }
     ]
 }

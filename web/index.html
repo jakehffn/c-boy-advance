@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="icon" href="favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="AGE"
+      content="Another GameBoy Emulator"
+    />
+    <title>AGE</title>
+  </head>
+  <body>
+    <div id="horizontal-align">
+      <div id="vertical-align">
+        <canvas id="canvas" height="144" width="160"></canvas>
+        <textarea id="output"></textarea>
+      </div>
+    </div>
+    
+    <script type='text/javascript'>
+      var Module = {
+        preRun: [],
+        postRun: [],
+        print: (function() {
+          var element = document.getElementById('output');
+          if (element) element.value = ''; // clear browser cache
+          return function(text) {
+            if (arguments.length > 1) text = Array.prototype.slice.call(arguments).join(' ');
+            console.log(text);
+            if (element) {
+              element.value += text + "\n";
+              element.scrollTop = element.scrollHeight;
+            }
+          };
+        })(),
+        canvas: (function() {
+          var canvas = document.getElementById('canvas');
+          return canvas;
+        })()
+      };
+    </script>
+    <script async src="AGE.js"></script>
+  </body>
+  <style>
+    * {
+        margin: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        background-color: #070707;
+
+        width: 100vw;
+        height: 100vh;
+    }
+
+    textarea {
+      height: 20%;
+      width: 60vw;
+      font-family: monospace;
+      background-color: #111111;
+      color: #eeeeee;
+      border: none;
+      resize: none;
+      margin-bottom: 10%;
+      padding: 1rem;
+      border-radius: .5rem;
+    }
+
+    canvas {
+      width: 160px;
+      height: 144px;
+      aspect-ratio: 1;
+      margin-inline: auto;
+      margin-bottom: 2rem;
+    }
+
+    #horizontal-align {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: row;
+        justify-content: center;
+    }
+
+    #vertical-align {
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+  </style>
+</html>
