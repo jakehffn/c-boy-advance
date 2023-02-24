@@ -10,7 +10,6 @@
 #include <GLES3/gl2ext.h>
 
 #else 
-
 // GLEW must come before OpenGL
 #include <GL\glew.h>
 
@@ -19,81 +18,12 @@
 #include <SDL.h>
 #include <SDL_opengl.h>
 
+#include "video/window.h"
+
 #define WIDTH 160
 #define HEIGHT 144
 
-bool init();
-void close();
-
-SDL_Window* window = NULL;
-SDL_GLContext context;
-
-// Initializes SDL, GLEW, then OpenGL
-bool init() {
-    bool success = true;
-
-    if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
-		printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
-		success = false;
-
-	} else {
-
-        #ifndef __EMSCRIPTEN__
-
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-        SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
-
-        #endif
-
-		window = SDL_CreateWindow(
-            "AGE", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
-			WIDTH, HEIGHT, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE
-		);
-
-		if(window == NULL) {
-
-			printf("Window could not be created! SDL Error: %s\n", SDL_GetError());
-			success = false;
-
-		} else {
-
-            context = SDL_GL_CreateContext(window);
-
-			if(context == NULL) {
-				printf("SDL: OpenGL context could not be created!\nSDL Error: %s\n", SDL_GetError());
-				success = false;
-			} else {
-
-                #ifndef __EMSCRIPTEN__
-
-                    glewExperimental = GL_TRUE; 
-                    GLenum glewError = glewInit();
-                    if( glewError != GLEW_OK ) {
-                        printf("GLEW: Error initializing! %s\n", glewGetErrorString(glewError));
-                    }
-
-                #endif
-
-				// Use Vsync
-				if( SDL_GL_SetSwapInterval( 1 ) < 0 ) {
-					printf("SDL: Warning: Unable to set VSync!\nSDL Error: %s\n", SDL_GetError());
-				}
-			}
-		}
-	}
-
-	return success;
-}
-
-void close() {
-
-	// Destroy window	
-	SDL_DestroyWindow(window);
-	window = NULL;
-
-	// Quit SDL subsystems
-	SDL_Quit();
-}
+Window window;
 
 const char* vertex_shader_source = "#version 300 es\n"
     "precision highp float;\n"
@@ -238,13 +168,14 @@ void drawToCanvas() {
 
     glBindVertexArray(0);
     glUseProgram(0);
-
-    SDL_GL_SwapWindow(window);
+    swapWindow(window);
 }
 
 int main(int argv, char** args) {
 
-    if (!init()) {
+    window = createWindow(WIDTH, HEIGHT);
+
+    if (!initWindow(window)) {
 
         printf("Failed to initialize SDL\n");
 
@@ -275,6 +206,8 @@ int main(int argv, char** args) {
 
         #endif
     }
+
+    destroyWindow(window);
 
     return 0;
 }

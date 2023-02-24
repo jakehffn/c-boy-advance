@@ -33,12 +33,9 @@ endif()
 find_package(OpenGL REQUIRED)
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
+
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2")
-    # set(USE_FLAGS "-o build/web/debug/age.js -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2")
-    # set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2")
-    # set(SDL2_LIBRARIES "-sUSE_SDL=2")
-    # set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${USE_FLAGS}")
-    # set(CMAKE_EXECUTABLE_SUFFIX .wasm)
+    
 endif ()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENGL_INCLUDE_DIRS})
