@@ -52,12 +52,6 @@ bool initShader(Shader* shader, const char* vertex_source, const char* fragment_
 
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
-
-    // Check for errors
-    GLenum error = glGetError();
-    if (error != GL_NO_ERROR) {
-        printf("OpenGL error: %s\n", gluErrorString(error));
-    }
 }
 
 void destroyShader(Shader shader) {
