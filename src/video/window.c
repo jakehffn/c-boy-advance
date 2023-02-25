@@ -20,11 +20,22 @@ Window createWindow(int width, int height) {
     return window;
 }
 
+void destroyWindow(Window window) {
+    
+	SDL_DestroyWindow(window->window);
+	window->window = NULL;
+
+	// Quit SDL subsystems
+	SDL_Quit();
+	// free(window);
+}
+
 bool initWindow(Window window) {
 
     bool success = true;
 
     if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER) < 0) {
+        
 		printf("SDL could not initialize! SDL Error: %s\n", SDL_GetError());
 		success = false;
 
@@ -36,6 +47,8 @@ bool initWindow(Window window) {
         SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_ES);
 
         #endif
+
+		SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
 		window->window = SDL_CreateWindow(
             "AGE", SDL_WINDOWPOS_UNDEFINED, SDL_WINDOWPOS_UNDEFINED, 
@@ -67,7 +80,7 @@ bool initWindow(Window window) {
                 #endif
 
 				// Use Vsync
-				if( SDL_GL_SetSwapInterval( 1 ) < 0 ) {
+				if( SDL_GL_SetSwapInterval( 2 ) < 0 ) {
 					printf("SDL: Warning: Unable to set VSync!\nSDL Error: %s\n", SDL_GetError());
 				}
 			}
@@ -75,15 +88,6 @@ bool initWindow(Window window) {
 	}
 
 	return success;
-}
-
-void destroyWindow(Window window) {
-    // Destroy window	
-	SDL_DestroyWindow(window->window);
-	window->window = NULL;
-
-	// Quit SDL subsystems
-	SDL_Quit();
 }
 
 void swapWindow(Window window) {

@@ -35,7 +35,11 @@ find_package(OpenGL REQUIRED)
 if (${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
 
     set_target_properties(${PROJECT_NAME} PROPERTIES LINK_FLAGS "-sMIN_WEBGL_VERSION=2 -sMAX_WEBGL_VERSION=2 -sUSE_SDL=2")
-    
+
+else ()
+
+    target_compile_options(${PROJECT_NAME} PRIVATE -Wall -Wextra -Wpedantic)
+
 endif ()
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${OPENGL_INCLUDE_DIRS})

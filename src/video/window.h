@@ -1,5 +1,7 @@
-#include <stdio.h>
+#pragma once
+
 #include <stdlib.h>
+#include <stdio.h>
 #include <stdbool.h>
 
 #ifndef __EMSCRIPTEN__
