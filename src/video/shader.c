@@ -6,7 +6,7 @@ struct Shader {
 
 bool initShader(Shader* shader, const char* vertex_source, const char* fragment_source) {
 
-    *shader = malloc(sizeof(Shader));
+    *shader = malloc(sizeof(struct Shader));
 
     unsigned int vertex_shader = glCreateShader(GL_VERTEX_SHADER);
     glShaderSource(vertex_shader, 1, &vertex_source, NULL);
