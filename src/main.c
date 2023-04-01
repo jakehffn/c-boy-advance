@@ -174,14 +174,24 @@ int main(int argv, char** args) {
                             printf("Quit event received\n");
                             quit = true;
                             break;
+
+                        case SDL_WINDOWEVENT:
+
+                            if (event.window.event == SDL_WINDOWEVENT_RESIZED) {
+                                glViewport(0, 0, event.window.data1, event.window.data2);
+                            }
+                            break;
+
                         case SDL_KEYDOWN:
                             // User pressed a key
                             printf("Key pressed: %s\n", SDL_GetKeyName(event.key.keysym.sym));
                             break;
+
                         case SDL_MOUSEBUTTONDOWN:
                             // User clicked the mouse button
                             printf("Mouse button %d clicked at (%d,%d)\n", event.button.button, event.button.x, event.button.y);
                             break;
+                            
                         default:
                             // Ignore other events
                             break;
