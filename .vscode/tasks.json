@@ -59,6 +59,29 @@
 				"panel": "dedicated",
 				"showReuseMessage": true,
 				"clear": false
+			},
+			"dependsOn":[
+				"Make Dir x86"
+			]
+		},
+		{
+			"type": "shell",
+			"label": "Make Dir x86",
+			"command": "mkdir ./build/x86/debug && mkdir ./build/x86/release || echo 0",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": true
 			}
 		},
         {
@@ -98,6 +121,29 @@
 				"panel": "dedicated",
 				"showReuseMessage": true,
 				"clear": false
+			},
+			"dependsOn":[
+				"Make Dirs Web"
+			]
+		},
+		{
+			"type": "shell",
+			"label": "Make Dirs Web",
+			"command": "mkdir ./build/web/debug && mkdir ./build/web/release || echo 0",
+			"options": {
+				"cwd": "${workspaceFolder}"
+			},
+			"group": {
+				"kind": "build",
+				"isDefault": true
+			},
+			"presentation": {
+				"echo": true,
+				"reveal": "always",
+				"focus": true,
+				"panel": "shared",
+				"showReuseMessage": true,
+				"clear": true
 			}
 		},
 		{

@@ -2,5 +2,5 @@
     "files.associations": {
         "glu.h": "c"
     },
-    "cmake.buildDirectory" : "${workspaceRoot}/build/${buildType}"
+    "cmake.buildDirectory" : "${workspaceRoot}/build/${buildKit}/${buildType}"
 }
