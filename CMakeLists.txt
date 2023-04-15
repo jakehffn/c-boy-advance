@@ -1,6 +1,6 @@
 cmake_minimum_required(VERSION 3.23)
 
-project(AGE)
+project(CWASMGE)
 
 set(CMAKE_VERBOSE_MAKEFILE on)
 
@@ -16,12 +16,7 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${CMAKE_SOURCE_DIR}/CMake/)
 # When copmiling for x86, include GLEW and SDL2
 if (NOT ${CMAKE_SYSTEM_NAME} MATCHES "Emscripten")
 
-    set(GLEW_VERBOSE true)
-    set(GLEW_ROOT "C:/mingw_dev_lib/glew-2.1.0")
     find_package(GLEW REQUIRED)
-    message(STATUS GLEW_LIBRARIES=${GLEW_LIBRARIES})
-    
-    set(SDL2_PATH "C:/mingw_dev_lib/SDL2")
     find_package(SDL2 REQUIRED)
     
     target_include_directories(${PROJECT_NAME} PUBLIC ${SDL2_INCLUDE_DIR} ${GLEW_INCLUDE_DIRS})
