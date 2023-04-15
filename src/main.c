@@ -20,6 +20,12 @@
 #include "video/window.h"
 #include "video/shader.h"
 
+#ifdef __GNUC__
+    #define UNUSED __attribute__((__unused__))
+#else
+    #define UNUSED
+#endif
+
 #define WIDTH 160
 #define HEIGHT 144
 
@@ -132,7 +138,7 @@ void drawToCanvas() {
     // destroyShader(shader);
 }
 
-int main(int argv, char** args) {
+int main(UNUSED int argv, UNUSED char** args) {
 
     window = createWindow(WIDTH, HEIGHT);
 

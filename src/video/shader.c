@@ -52,6 +52,8 @@ bool initShader(Shader* shader, const char* vertex_source, const char* fragment_
 
     glDeleteShader(vertex_shader);
     glDeleteShader(fragment_shader);
+
+    return success;
 }
 
 void destroyShader(Shader shader) {
