@@ -1,3 +1,5 @@
+#pragma once
+
 #include <stdlib.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -20,8 +22,8 @@
 #include "window.h"
 #include "shader.h"
 
-#define WIDTH 160
-#define HEIGHT 144
+#define WIDTH 240
+#define HEIGHT 160
 
 const char* vertex_shader_source = "#version 300 es\n"
     "precision highp float;\n"
