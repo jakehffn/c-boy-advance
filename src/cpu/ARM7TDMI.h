@@ -80,7 +80,7 @@ enum CONDITION_CODE {
 };
 
 // Data Processing Instruction OpCodes
-enum DPI_OPCODE {
+enum DATA_PROC_OPCODE {
     AND, // Logical AND
     EOR, // Logical Exclusive OR
     SUB, // Subtract
@@ -99,34 +99,70 @@ enum DPI_OPCODE {
     MVN // Move Not
 };
 
-// Data Processing Instruction format
+enum INSTRUCTION_GROUP {
+    DATA_PROC_IMM_SHIFT, // Data Processing (Register) Immediate Shift
+    MISC_1, // Miscellaneous group 1
+    DATA_PROC_REG_SHIFT, // Data Processing (Register) Register Shift
+    MISC_2, // Miscellaneous group 2
+    MULTIPLIES, // Multiplies              | 
+    EX_LOAD_STORE, // Extra Loads/Stores   | These are the same in the documentation table
+    DATA_PROC_IMM, // Data Processing Immediate
+    UNDEFINED,
+    MOVE_IMM_TO_STAT, // Move Immediate to Status Register
+    LOAD_STORE_IMM_OFFSET, // Load/Store Immediate offset
+    LOAD_STORE_REG_OFFSET, // Load/Store Register offset
+    MEDIA, // Media Instructions
+    ARCH_UNDEFINED, // Architecturally Undefined
+    BRANCH, // Branch and Branch with Link
+    COPROC_LOAD_STORE, // Coprocessor Load/Store       |
+    DOUBLE_REG_TRANS, // Double Register Transfers     | These were also split apart
+    COPROC_DATA_PROC, // Coprocessor Data Processsing  
+    COPROC_REG_TRANS, // Coprocessor Data Transfers
+    SOFTWARE_INT, // Software Interrupt
+    UNCONDITIONAL, // Unconditional Instructions
+};
+
+// Data Processing (Register) Immediate Shift Instruction format
 typedef struct {
-    unsigned int shifter_operand : 12;
+    REGISTER Rm : 4;
+    unsigned int : 0; // Must be 0b0
+    unsigned int shift;
+    unsigned int shift_amount : 5;
     REGISTER Rd : 4; // Destination register
     REGISTER Rn : 4; // First source operand register
     unsigned int S : 1; // Signifies condition codes updates
-    DPI_OPCODE opcode : 4;
-    unsigned int I : 1; // Distinguishes immediate and register form of shifter_operand
-    unsigned int : 2; // Must be 0b00
+    DATA_PROC_OPCODE opcode : 4;
+    unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
-} DPI_Instruction;
+} Data_Proc_Imm_Shift_Instruction;
 
-// Load and Store Word or Unsigned Byte Instruction format
+// Data Processing (Register) Register Shift Instruction format
 typedef struct {
-    unsigned int addr_mode : 12; // Addressing mode specific
-    REGISTER Rd : 4; // Source
-    REGISTER Rn : 4; // Base register
-    unsigned int L : 1; // Distinguishes between a Load (L == 1) and a Store instruction (L == 0)
-    unsigned int W : 1; 
-    unsigned int B : 1; // Distinguishes unsigned unsigned byte (B == 1) and word (B == 0) access
-    unsigned int U : 1;
-    unsigned int P : 1;
-    unsigned int I : 1;
-    unsigned int : 2; // Must be 0b01
+    REGISTER Rm : 4;
+    unsigned int : 1; // Must be 0b1;
+    unsigned int shift : 2;
+    unsigned int : 1; // Must be 0b0
+    REGISTER Rs : 4;
+    REGISTER Rd : 4; // Destination register
+    REGISTER Rn : 4; // First source operand register
+    unsigned int S : 1; // Signifies condition codes updates
+    DATA_PROC_OPCODE opcode : 4;
+    unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
-} LDSTO_WUB_Instruction;
+} Data_Proc_Reg_Shift_Instruction;
 
-// Load and Store Unsigned Half-Word and Sign-Extend Half-Word or Byte Instruction format
+typedef struct {
+    unsigned int : 4;
+    unsigned int : 1; // Must be 0b1
+    unsigned int : 2;
+    unsigned int : 1; // Must be 0b1
+    unsigned int : 17;
+    unsigned int : 3; // Must be 0b000
+    CONDITION_CODE cond : 4;
+} Multiplies_Instruction;
+
+// Extra Load and Store Instruction format
+// Load and Store Unsigned Half-Word and Sign-Extend Half-Word or Byte
 typedef struct {
     unsigned int addr_mode_2 : 4;
     unsigned int : 1; // Must be 0b1
@@ -143,7 +179,50 @@ typedef struct {
     unsigned int P : 1;
     unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
-} LDSTO_UHW_SEHWB_Instruction;
+} Ex_Load_Store_Instruction;
+
+// Data Processing Immediate Instruction format
+typedef struct {
+    unsigned int immediate : 8;
+    unsigned int rotate : 4;
+    REGISTER Rd : 4; // Destination register
+    REGISTER Rn : 4; // First source operand register
+    unsigned int S : 1; // Signifies condition codes updates
+    DATA_PROC_OPCODE opcode : 4;
+    unsigned int : 3; // Must be 0b001
+    CONDITION_CODE cond : 4;
+} Data_Proc_Imm_Instruction;
+
+// Load and Store Word or Unsigned Byte Instruction format
+typedef struct {
+    unsigned int immediate : 12; // Immediate offset
+    REGISTER Rd : 4; // Source
+    REGISTER Rn : 4; // Base register
+    unsigned int L : 1; // Distinguishes between a Load (L == 1) and a Store instruction (L == 0)
+    unsigned int W : 1; 
+    unsigned int B : 1; // Distinguishes unsigned unsigned byte (B == 1) and word (B == 0) access
+    unsigned int U : 1;
+    unsigned int P : 1;
+    unsigned int : 3; // Must be 0b010
+    CONDITION_CODE cond : 4;
+} Load_Store_Imm_Offset_Instruction;
+
+// Load and Store Word or Unsigned Byte Instruction format
+typedef struct {
+    REGISTER Rm : 4; // Offset register
+    unsigned int : 1; // Must be 0b1
+    unsigned int shift : 2;
+    unsigned int shift_amount : 5; 
+    REGISTER Rd : 4; // Source
+    REGISTER Rn : 4; // Base register
+    unsigned int L : 1; // Distinguishes between a Load (L == 1) and a Store instruction (L == 0)
+    unsigned int W : 1; 
+    unsigned int B : 1; // Distinguishes unsigned unsigned byte (B == 1) and word (B == 0) access
+    unsigned int U : 1;
+    unsigned int P : 1;
+    unsigned int : 3; // Must be 0b011
+    CONDITION_CODE cond : 4;
+} Load_Store_Reg_Offset_Instruction;
 
 // Load and Store Multiple Instruction format
 typedef struct {
@@ -156,7 +235,15 @@ typedef struct {
     unsigned int P : 1; // Addressing mode specifier
     unsigned int : 3; // Must be 0b100
     CONDITION_CODE cond : 4;
-} LDSTO_Mult_Instruction;
+} Load_Store_Mult_Instruction;
+
+// Branch Instruction format
+typedef struct {
+    unsigned int offset : 24; // 
+    unsigned int L : 1; // Preserve return in Link
+    unsigned int : 3; // Must be 0b101
+    CONDITION_CODE cond : 4;
+} Branch_Instruction;
 
 struct Instruction {
     union {
@@ -165,9 +252,15 @@ struct Instruction {
             uint16_t hword_low;
             uint16_t hword_high;
         };
-
-        DPI_Instruction dpi_instruction;
-        LDSTO_WUB_Instruction ldsto_wub_instruction;
-        LDSTO_UHW_SEHWB_Instruction ldsto_uhw_sehwb_Instruction;
     };
 };
+
+/*
+Decoding instruction bit check order: 
+27 26 25
+21 22 23 24
+20 
+4
+7
+
+*/
