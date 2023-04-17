@@ -76,7 +76,6 @@ enum CONDITION_CODE {
     GT, // Signed greater than - Z == 0 && N == V
     LE, // Signed less than or equal - Z == 1 && N != V
     AL, // Always
-    VAR, // Other info
 };
 
 // Data Processing Instruction OpCodes
@@ -134,7 +133,19 @@ typedef struct {
     DATA_PROC_OPCODE opcode : 4;
     unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
-} Data_Proc_Imm_Shift_Instruction;
+} DataProcImmShiftInstruction;
+
+// NEEDS INFO
+typedef struct {
+    unsigned int : 4;
+    unsigned int : 1; // Must be 0b0
+    unsigned int : 15;
+    unsigned int : 1; // Must be 0b0
+    unsigned int : 4; // 0b10xx
+    unsigned int : 3; // Must be 0b000
+    CONDITION_CODE cond : 4;
+} Misc1Instruction;
+
 
 // Data Processing (Register) Register Shift Instruction format
 typedef struct {
@@ -149,8 +160,22 @@ typedef struct {
     DATA_PROC_OPCODE opcode : 4;
     unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
-} Data_Proc_Reg_Shift_Instruction;
+} DataProcRegShiftInstruction;
 
+// NEEDS INFO
+typedef struct {
+    unsigned int : 4;
+    unsigned int : 1; // Must be 0b1
+    unsigned int : 2;
+    unsigned int : 1; // Must be 0b0
+    unsigned int : 12;
+    unsigned int : 1; // Must be 0b0
+    unsigned int : 4; // 0b10xx
+    unsigned int : 3; // Must be 0b000
+    CONDITION_CODE cond : 4;
+} Misc2Instruction;
+
+// NEEDS INFO
 typedef struct {
     unsigned int : 4;
     unsigned int : 1; // Must be 0b1
@@ -159,7 +184,7 @@ typedef struct {
     unsigned int : 17;
     unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
-} Multiplies_Instruction;
+} MultipliesInstruction;
 
 // Extra Load and Store Instruction format
 // Load and Store Unsigned Half-Word and Sign-Extend Half-Word or Byte
@@ -179,7 +204,7 @@ typedef struct {
     unsigned int P : 1;
     unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
-} Ex_Load_Store_Instruction;
+} ExLoadStoreInstruction;
 
 // Data Processing Immediate Instruction format
 typedef struct {
@@ -191,7 +216,31 @@ typedef struct {
     DATA_PROC_OPCODE opcode : 4;
     unsigned int : 3; // Must be 0b001
     CONDITION_CODE cond : 4;
-} Data_Proc_Imm_Instruction;
+} DataProcImmInstruction;
+
+// NEEDS INFO
+typedef struct {
+    unsigned int : 20;
+    unsigned int : 2; // Must be 0b00
+    unsigned int : 1;
+    unsigned int : 2; // Must be 0b10
+    unsigned int : 3; // Must be 0b001
+    CONDITION_CODE cond : 4;
+} UndefinedInstruction;
+
+// Move Immediate to Status Register Instruction format
+// NEEDS INFO
+typedef struct {
+    unsigned int immediate : 8;
+    unsigned int rotate : 4;
+    unsigned int SBO : 4; 
+    unsigned int mask : 4; 
+    unsigned int : 2; // Must be 0b10
+    unsigned int R : 1;
+    unsigned int : 2; // Must be 0b10
+    unsigned int : 3; // Must be 0b001
+    CONDITION_CODE cond : 4;
+} MoveImmToStatInstruction;
 
 // Load and Store Word or Unsigned Byte Instruction format
 typedef struct {
@@ -205,7 +254,7 @@ typedef struct {
     unsigned int P : 1;
     unsigned int : 3; // Must be 0b010
     CONDITION_CODE cond : 4;
-} Load_Store_Imm_Offset_Instruction;
+} LoadStoreImmOffsetInstruction;
 
 // Load and Store Word or Unsigned Byte Instruction format
 typedef struct {
@@ -222,7 +271,26 @@ typedef struct {
     unsigned int P : 1;
     unsigned int : 3; // Must be 0b011
     CONDITION_CODE cond : 4;
-} Load_Store_Reg_Offset_Instruction;
+} LoadStoreRegOffsetInstruction;
+
+// NEEDS INFO
+typedef struct {
+    unsigned int : 4;
+    unsigned int : 1; // Must be 0b1
+    unsigned int : 20;
+    unsigned int : 3; // Must be 0b011
+    CONDITION_CODE cond : 4;
+} MediaInstruction;
+
+// NEEDS INFO
+typedef struct {
+    unsigned int : 4;
+    unsigned int : 4; // Must be 0b1111
+    unsigned int : 12;
+    unsigned int : 5; // Must be 0b11111
+    unsigned int : 3; // Must be 0b011
+    CONDITION_CODE cond : 4;
+} ArchUndefinedInstruction;
 
 // Load and Store Multiple Instruction format
 typedef struct {
@@ -235,23 +303,116 @@ typedef struct {
     unsigned int P : 1; // Addressing mode specifier
     unsigned int : 3; // Must be 0b100
     CONDITION_CODE cond : 4;
-} Load_Store_Mult_Instruction;
+} LoadStoreMultInstruction;
 
-// Branch Instruction format
+// Branch and Branch with Link Instruction format
 typedef struct {
-    unsigned int offset : 24; // 
+    unsigned int offset : 24;
     unsigned int L : 1; // Preserve return in Link
     unsigned int : 3; // Must be 0b101
     CONDITION_CODE cond : 4;
-} Branch_Instruction;
+} BranchInstruction;
 
-struct Instruction {
+
+// NEEDS INFO
+typedef struct {
+    unsigned int offset : 8;
+    unsigned int cp_num : 4;
+    REGISTER CRd : 4; // Source
+    REGISTER Rn : 4; // Base register
+    unsigned int L : 1; // Distinguishes between a Load (L == 1) and a Store (L == 0) instruction
+    unsigned int W : 1;
+    unsigned int N : 1;
+    unsigned int U : 1; 
+    unsigned int P : 1; 
+    unsigned int : 3; // Must be 0b110
+    CONDITION_CODE cond : 4;
+} CoprocLoadStoreInstruction;
+
+// NEEDS INFO
+typedef struct {
+    unsigned int offset : 8;
+    unsigned int cp_num : 4;
+    REGISTER CRd : 4; 
+    REGISTER Rn : 4; 
+    unsigned int L : 1; 
+    unsigned int W : 1;
+    unsigned int N : 1;
+    unsigned int U : 1; 
+    unsigned int P : 1; 
+    unsigned int : 3; // Must be 0b110
+    CONDITION_CODE cond : 4;
+} DoubleRegTransInstruction; 
+
+// NEEDS INFO
+typedef struct {
+    REGISTER CRm : 4;
+    unsigned int : 1; // Must be 0b0
+    unsigned int opcode2 : 3;
+    unsigned int cp_num : 4;
+    REGISTER CRd : 4; 
+    REGISTER CRn : 4; 
+    unsigned int opcode1 : 4;
+    unsigned int : 4; // Must be 0b1110
+    CONDITION_CODE cond : 4;
+} CoprocDataProcInstruction; 
+
+// NEEDS INFO
+typedef struct {
+    REGISTER CRm : 4;
+    unsigned int : 1; // Must be 0b1
+    unsigned int opcode2 : 3;
+    unsigned int cp_num : 4;
+    REGISTER Rd : 4; 
+    REGISTER CRn : 4; 
+    unsigned int L : 1;
+    unsigned int opcode1 : 3;
+    unsigned int : 4; // Must be 0b1110
+    CONDITION_CODE cond : 4;
+} CoprocRegTransInstruction; 
+
+// NEEDS INFO
+typedef struct {
+    unsigned int swi_number : 24;
+    unsigned int : 4; // Must be 0b1111
+    CONDITION_CODE cond : 4;
+} SoftwareIntInstruction;
+
+// NEEDS INFO
+typedef struct {
+    unsigned int : 28;
+    unsigned int : 4; // Must be 0b1111
+} UnconditionalInstruction;
+
+struct InstructionWord {
     union {
         uint32_t word;
         struct {
             uint16_t hword_low;
             uint16_t hword_high;
         };
+
+        DataProcImmShiftInstruction data_proc_imm_shift_instruction;
+        Misc1Instruction misc_1_instruction;
+        DataProcRegShiftInstruction data_proc_reg_shift_instruction;
+        Misc2Instruction misc_2_instruction;
+        MultipliesInstruction multiplies_instruction;
+        ExLoadStoreInstruction ex_load_store_instruction;
+        DataProcImmInstruction data_proc_imm_instruction;
+        UndefinedInstruction undefined_instruction;
+        MoveImmToStatInstruction move_imm_to_stat_instruction;
+        LoadStoreImmOffsetInstruction load_store_imm_offset_instruction;
+        LoadStoreRegOffsetInstruction load_store_reg_offset_instruction;
+        MediaInstruction media_instruction;
+        ArchUndefinedInstruction arch_undefined_instruction;
+        LoadStoreMultInstruction load_store_mult_instruction;
+        BranchInstruction branch_instruction;
+        CoprocLoadStoreInstruction coproc_load_store_instruction;
+        DoubleRegTransInstruction double_reg_trans_instruction;
+        CoprocDataProcInstruction coproc_data_proc_instruction;
+        CoprocRegTransInstruction coproc_reg_trans_instruction;
+        SoftwareIntInstruction software_int_instruction;
+        UnconditionalInstruction unconditional_instruction;
     };
 };
 
