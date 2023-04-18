@@ -6,4 +6,5 @@ target_include_directories(${PROJECT_NAME} PUBLIC
     video
 )
 
+add_subdirectory(cpu)
 add_subdirectory(video)

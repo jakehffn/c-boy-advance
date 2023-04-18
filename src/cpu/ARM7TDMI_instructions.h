@@ -1,5 +1,3 @@
-// Little-endian based
-
 #pragma once
 
 #include <stdint.h>
@@ -9,7 +7,7 @@
 // abt - Abort
 // irq - IRQ
 // und - Undefined
-enum REGISTER {
+typedef enum {
     R0,
     R1,
     R2,
@@ -34,11 +32,11 @@ enum REGISTER {
     // SPSR_abt,
     // SPSR_irq,
     // SPSR_und,
-};
+} REGISTER;
 
 uint32_t registers[18];
 
-enum CPSR_FLAG {
+typedef enum {
     M0 = 1, // Mode Bits
     M1 = 1 << 1,
     M2 = 1 << 2,
@@ -58,9 +56,9 @@ enum CPSR_FLAG {
     C = 1 << 29, // Carry/Borrow Flag
     Z = 1 << 30, // Zero Flag
     N = 1 << 31  // Sign Flag
-};
+} CPSR_FLAG;
 
-enum CONDITION_CODE {
+typedef enum {
     EQ, // Equal - Z set
     NE, // Not Equal - Z clear
     CS_HS, // Carry set/unsigned higher or same - C set
@@ -76,10 +74,10 @@ enum CONDITION_CODE {
     GT, // Signed greater than - Z == 0 && N == V
     LE, // Signed less than or equal - Z == 1 && N != V
     AL, // Always
-};
+} CONDITION_CODE;
 
 // Data Processing Instruction OpCodes
-enum DATA_PROC_OPCODE {
+typedef enum {
     AND, // Logical AND
     EOR, // Logical Exclusive OR
     SUB, // Subtract
@@ -96,15 +94,14 @@ enum DATA_PROC_OPCODE {
     MOV, // Move
     BIC, // Bit Clear
     MVN // Move Not
-};
+} DATA_PROC_OPCODE;
 
-enum INSTRUCTION_GROUP {
+typedef enum {
     DATA_PROC_IMM_SHIFT, // Data Processing (Register) Immediate Shift
     MISC_1, // Miscellaneous group 1
     DATA_PROC_REG_SHIFT, // Data Processing (Register) Register Shift
     MISC_2, // Miscellaneous group 2
-    MULTIPLIES, // Multiplies              | 
-    EX_LOAD_STORE, // Extra Loads/Stores   | These are the same in the documentation table
+    MULTIPLIES_OR_EX_LOAD_STORE, // Multiplies or Extra Loads/Stores   | These are the same in the documentation table
     DATA_PROC_IMM, // Data Processing Immediate
     UNDEFINED,
     MOVE_IMM_TO_STAT, // Move Immediate to Status Register
@@ -112,14 +109,14 @@ enum INSTRUCTION_GROUP {
     LOAD_STORE_REG_OFFSET, // Load/Store Register offset
     MEDIA, // Media Instructions
     ARCH_UNDEFINED, // Architecturally Undefined
+    LOAD_STORE_MULTIPLE, // Load/Store Multiple registers
     BRANCH, // Branch and Branch with Link
-    COPROC_LOAD_STORE, // Coprocessor Load/Store       |
-    DOUBLE_REG_TRANS, // Double Register Transfers     | These were also split apart
+    COPROC_LOAD_STORE_AND_DOUBLE_REG_TRANS, // Coprocessor Load/Store or Double Register Transfers
     COPROC_DATA_PROC, // Coprocessor Data Processsing  
     COPROC_REG_TRANS, // Coprocessor Data Transfers
     SOFTWARE_INT, // Software Interrupt
     UNCONDITIONAL, // Unconditional Instructions
-};
+} INSTRUCTION_GROUP;
 
 // Data Processing (Register) Immediate Shift Instruction format
 typedef struct {
@@ -384,7 +381,20 @@ typedef struct {
     unsigned int : 4; // Must be 0b1111
 } UnconditionalInstruction;
 
-struct InstructionWord {
+typedef struct {
+    unsigned int : 4;
+    unsigned int b_4 : 1;
+    unsigned int : 2;
+    unsigned int b_7 : 1;
+    unsigned int : 12;
+    unsigned int b_20 : 1;
+    unsigned int b_22_21 : 2;
+    unsigned int b_24_23 : 2;
+    unsigned int b_27_25 : 3;
+    CONDITION_CODE cond : 4;
+} DecodeBits;
+
+typedef struct {
     union {
         uint32_t word;
         struct {
@@ -413,8 +423,12 @@ struct InstructionWord {
         CoprocRegTransInstruction coproc_reg_trans_instruction;
         SoftwareIntInstruction software_int_instruction;
         UnconditionalInstruction unconditional_instruction;
+
+        DecodeBits decode_bits;
     };
-};
+} InstructionWord;
+
+INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
 
 /*
 Decoding instruction bit check order: 
