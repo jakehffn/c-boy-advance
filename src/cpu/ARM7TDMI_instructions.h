@@ -34,8 +34,6 @@ typedef enum {
     // SPSR_und,
 } REGISTER;
 
-uint32_t registers[18];
-
 typedef enum {
     M0 = 1, // Mode Bits
     M1 = 1 << 1,
@@ -74,6 +72,7 @@ typedef enum {
     GT, // Signed greater than - Z == 0 && N == V
     LE, // Signed less than or equal - Z == 1 && N != V
     AL, // Always
+    UN // Unconditional
 } CONDITION_CODE;
 
 // Data Processing Instruction OpCodes
@@ -116,6 +115,8 @@ typedef enum {
     COPROC_REG_TRANS, // Coprocessor Data Transfers
     SOFTWARE_INT, // Software Interrupt
     UNCONDITIONAL, // Unconditional Instructions
+
+    UNKNOWN // This case should never be found
 } INSTRUCTION_GROUP;
 
 // Data Processing (Register) Immediate Shift Instruction format
@@ -384,7 +385,7 @@ typedef struct {
 typedef struct {
     unsigned int : 4;
     unsigned int b_4 : 1;
-    unsigned int : 2;
+    unsigned int b_6_5: 2;
     unsigned int b_7 : 1;
     unsigned int : 12;
     unsigned int b_20 : 1;
