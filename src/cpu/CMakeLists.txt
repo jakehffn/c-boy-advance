@@ -1,8 +1,8 @@
-target_sources(cpu_test PUBLIC
-    cpu.c
+target_sources(test_cpu PUBLIC
+    ARM7TDMI_instruction.test.cc
     ARM7TDMI_instruction.c
 )
 
-target_include_directories(cpu_test PUBLIC
+target_include_directories(test_cpu PUBLIC
     ${CMAKE_CURRENT_SOURCE_DIR}
 )
