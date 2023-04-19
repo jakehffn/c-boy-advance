@@ -5,8 +5,6 @@ uint32_t registers[18];
 
 INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst) {
 
-    printf("Decoding %x\n", inst.word);
-
     if (inst.decode_bits.cond == UN) {
         return UNCONDITIONAL;
     }
