@@ -24,8 +24,8 @@ typedef enum {
     R13, // SP, R13_fiq, R13_svc, R13_abt, R13_irq, R13_und,
     R14, // LR, R14_fiq, R14_svc, R14_abt, R14_irq, R14_und,
     R15, // PC
-    CPSR,
-    SPSR
+    // CPSR,
+    // SPSR
 
     // SPSR_fiq,
     // SPSR_svc,
@@ -430,13 +430,3 @@ typedef struct {
 } InstructionWord;
 
 INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
-
-/*
-Decoding instruction bit check order: 
-27 26 25
-21 22 23 24
-20 
-4
-7
-
-*/
