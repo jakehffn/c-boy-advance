@@ -7,9 +7,6 @@ set(CMAKE_VERBOSE_MAKEFILE on)
 set(CMAKE_C_STANDARD 17)
 set(CMAKE_C_STANDARD_REQUIRED True)
 
-# ---------------------------------------------
-# GTest
-# ---------------------------------------------
 # GoogleTest requires at least C++14
 set(CMAKE_CXX_STANDARD 14)
 
@@ -32,8 +29,6 @@ target_link_libraries(
 
 include(GoogleTest)
 gtest_discover_tests(test_cpu)
-
-# ---------------------------------------------
 
 add_executable(${PROJECT_NAME})
 
