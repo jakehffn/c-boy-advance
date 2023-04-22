@@ -1,6 +1,19 @@
 #pragma once
 
 #include <stdint.h>
+#include <stdbool.h>
+
+typedef struct {
+    uint32_t registers[16];
+    uint32_t fiq_registers[7];
+    uint32_t svc_registers[2];
+    uint32_t abt_registers[2];
+    uint32_t irq_registers[2];
+    uint32_t und_registers[2];
+
+    uint32_t flags;
+
+} ARM7TDMI;
 
 // fiq - FIQ
 // svc - Supervisor
@@ -8,22 +21,26 @@
 // irq - IRQ
 // und - Undefined
 typedef enum {
-    R0,
-    R1,
-    R2,
-    R3,
-    R4,
-    R5,
-    R6,
-    R7,
-    R8, // R8_fiq,
-    R9, // R9_fiq,
-    R10, // R10_fiq,
-    R11, // R11_fiq,
-    R12, // R12_fiq,
-    R13, // SP, R13_fiq, R13_svc, R13_abt, R13_irq, R13_und,
-    R14, // LR, R14_fiq, R14_svc, R14_abt, R14_irq, R14_und,
-    R15, // PC
+    REGISTER_R0,
+    REGISTER_R1,
+    REGISTER_R2,
+    REGISTER_R3,
+    REGISTER_R4,
+    REGISTER_R5,
+    REGISTER_R6,
+    REGISTER_R7,  // Banked registers:
+    REGISTER_R8,  //   R8_fiq,
+    REGISTER_R9,  //   R9_fiq,
+    REGISTER_R10, //   R10_fiq,
+    REGISTER_R11, //   R11_fiq,
+    REGISTER_R12, //   R12_fiq,
+    REGISTER_R13, //   R13_fiq, R13_svc, R13_abt, R13_irq, R13_und,
+    REGISTER_R14, //   R14_fiq, R14_svc, R14_abt, R14_irq, R14_und,
+    REGISTER_R15,
+
+    REGISTER_SP = 13,
+    REGISTER_LR = 14,
+    REGISTER_PC = 15
     // CPSR,
     // SPSR
 
@@ -35,88 +52,88 @@ typedef enum {
 } REGISTER;
 
 typedef enum {
-    M0 = 1, // Mode Bits
-    M1 = 1 << 1,
-    M2 = 1 << 2,
-    M3 = 1 << 3,
-    M4 = 1 << 4,
+    CPSR_FLAG_M0 = 1, // Mode Bits
+    CPSR_FLAG_M1 = 1 << 1,
+    CPSR_FLAG_M2 = 1 << 2,
+    CPSR_FLAG_M3 = 1 << 3,
+    CPSR_FLAG_M4 = 1 << 4,
 
-    T = 1 << 5, // State Bit (0=ARM, 1=THUMB)
-    F = 1 << 6, // FIQ disable (0=enable, 1=disable)
-    I = 1 << 7, // IRQ disable (0=enable, 1=disable)
-    A = 1 << 8, // Abort disable (1=Disable Imprecise Data Aborts)
-    E = 1 << 9, // Endian
+    CPSR_FLAG_T = 1 << 5, // State Bit (0=ARM, 1=THUMB)
+    CPSR_FLAG_F = 1 << 6, // FIQ disable (0=enable, 1=disable)
+    CPSR_FLAG_I = 1 << 7, // IRQ disable (0=enable, 1=disable)
+    CPSR_FLAG_A = 1 << 8, // Abort disable (1=Disable Imprecise Data Aborts)
+    CPSR_FLAG_E = 1 << 9, // Endian
     // 10-23 reserved
-    J = 1 << 24, // Jazelle Mode (1=Jazelle Bytecode instructions)
+    CPSR_FLAG_J = 1 << 24, // Jazelle Mode (1=Jazelle Bytecode instructions)
     // 25-26 reserved
-    Q = 1 << 27, // Sticky Overflow (1=Sticky Overflow)
-    V = 1 << 28, // Overflow Flag
-    C = 1 << 29, // Carry/Borrow Flag
-    Z = 1 << 30, // Zero Flag
-    N = 1 << 31  // Sign Flag
+    CPSR_FLAG_Q = 1 << 27, // Sticky Overflow (1=Sticky Overflow)
+    CPSR_FLAG_V = 1 << 28, // Overflow Flag
+    CPSR_FLAG_C = 1 << 29, // Carry/Borrow Flag
+    CPSR_FLAG_Z = 1 << 30, // Zero Flag
+    CPSR_FLAG_N = 1 << 31  // Sign Flag
 } CPSR_FLAG;
 
 typedef enum {
-    EQ, // Equal - Z set
-    NE, // Not Equal - Z clear
-    CS_HS, // Carry set/unsigned higher or same - C set
-    CC_LO, // Carry clear/ unsigned lower - C clear
-    MI, // Minus/negative - N set
-    PL, // Plus/positive or zero - N clear
-    VS, // Overflow - V set
-    VC, // No overflow - V clear
-    HI, // Unsinged higher - C set and Z clear
-    LS, // Unsigned lower or same - C clear or Z set
-    GE, // Signed greater than or equal - N == V
-    LT, // Signed less than - N != V
-    GT, // Signed greater than - Z == 0 && N == V
-    LE, // Signed less than or equal - Z == 1 && N != V
-    AL, // Always
-    UN // Unconditional
+    CONDITION_CODE_EQ, // Equal - Z set
+    CONDITION_CODE_NE, // Not Equal - Z clear
+    CONDITION_CODE_CS_HS, // Carry set/unsigned higher or same - C set
+    CONDITION_CODE_CC_LO, // Carry clear/ unsigned lower - C clear
+    CONDITION_CODE_MI, // Minus/negative - N set
+    CONDITION_CODE_PL, // Plus/positive or zero - N clear
+    CONDITION_CODE_VS, // Overflow - V set
+    CONDITION_CODE_VC, // No overflow - V clear
+    CONDITION_CODE_HI, // Unsinged higher - C set and Z clear
+    CONDITION_CODE_LS, // Unsigned lower or same - C clear or Z set
+    CONDITION_CODE_GE, // Signed greater than or equal - N == V
+    CONDITION_CODE_LT, // Signed less than - N != V
+    CONDITION_CODE_GT, // Signed greater than - Z == 0 && N == V
+    CONDITION_CODE_LE, // Signed less than or equal - Z == 1 && N != V
+    CONDITION_CODE_AL, // Always
+    CONDITION_CODE_UN // Unconditional
 } CONDITION_CODE;
 
 // Data Processing Instruction OpCodes
 typedef enum {
-    AND, // Logical AND
-    EOR, // Logical Exclusive OR
-    SUB, // Subtract
-    RSB, // Reverse Subtract
-    ADD, // Add
-    ADC, // Add with Carry
-    SBC, // Subtract with Carry
-    RSC, // Reverse Subtract with Carry
-    TST, // Test
-    TEQ, // Test Equivalence
-    CMP, // Compare
-    CMN, // Compare Negated
-    ORR, // Logical (inclusive) OR
-    MOV, // Move
-    BIC, // Bit Clear
-    MVN // Move Not
+    DATA_PROC_OPCODE_AND, // Logical AND
+    DATA_PROC_OPCODE_EOR, // Logical Exclusive OR
+    DATA_PROC_OPCODE_SUB, // Subtract
+    DATA_PROC_OPCODE_RSB, // Reverse Subtract
+    DATA_PROC_OPCODE_ADD, // Add
+    DATA_PROC_OPCODE_ADC, // Add with Carry
+    DATA_PROC_OPCODE_SBC, // Subtract with Carry
+    DATA_PROC_OPCODE_RSC, // Reverse Subtract with Carry
+    DATA_PROC_OPCODE_TST, // Test
+    DATA_PROC_OPCODE_TEQ, // Test Equivalence
+    DATA_PROC_OPCODE_CMP, // Compare
+    DATA_PROC_OPCODE_CMN, // Compare Negated
+    DATA_PROC_OPCODE_ORR, // Logical (inclusive) OR
+    DATA_PROC_OPCODE_MOV, // Move
+    DATA_PROC_OPCODE_BIC, // Bit Clear
+    DATA_PROC_OPCODE_MVN // Move Not
 } DATA_PROC_OPCODE;
 
 typedef enum {
-    DATA_PROC_IMM_SHIFT, // Data Processing (Register) Immediate Shift
-    MISC_1, // Miscellaneous group 1
-    DATA_PROC_REG_SHIFT, // Data Processing (Register) Register Shift
-    MISC_2, // Miscellaneous group 2
-    MULTIPLIES_OR_EX_LOAD_STORE, // Multiplies or Extra Loads/Stores   | These are the same in the documentation table
-    DATA_PROC_IMM, // Data Processing Immediate
-    UNDEFINED,
-    MOVE_IMM_TO_STAT, // Move Immediate to Status Register
-    LOAD_STORE_IMM_OFFSET, // Load/Store Immediate offset
-    LOAD_STORE_REG_OFFSET, // Load/Store Register offset
-    MEDIA, // Media Instructions
-    ARCH_UNDEFINED, // Architecturally Undefined
-    LOAD_STORE_MULTIPLE, // Load/Store Multiple registers
-    BRANCH, // Branch and Branch with Link
-    COPROC_LOAD_STORE_AND_DOUBLE_REG_TRANS, // Coprocessor Load/Store or Double Register Transfers
-    COPROC_DATA_PROC, // Coprocessor Data Processsing  
-    COPROC_REG_TRANS, // Coprocessor Data Transfers
-    SOFTWARE_INT, // Software Interrupt
-    UNCONDITIONAL, // Unconditional Instructions
+    INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT, // Data Processing (Register) Immediate Shift
+    INSTRUCTION_GROUP_MISC_1, // Miscellaneous group 1
+    INSTRUCTION_GROUP_DATA_PROC_REG_SHIFT, // Data Processing (Register) Register Shift
+    INSTRUCTION_GROUP_MISC_2, // Miscellaneous group 2
+    INSTRUCTION_GROUP_MULTIPLIES_OR_EX_LOAD_STORE, // Multiplies or Extra Loads/Stores   | These are the same in the documentation table
+    INSTRUCTION_GROUP_DATA_PROC_IMM, // Data Processing Immediate
+    INSTRUCTION_GROUP_UNDEFINED,
+    INSTRUCTION_GROUP_MOVE_IMM_TO_STAT, // Move Immediate to Status Register
+    INSTRUCTION_GROUP_LOAD_STORE_IMM_OFFSET, // Load/Store Immediate offset
+    INSTRUCTION_GROUP_LOAD_STORE_REG_OFFSET, // Load/Store Register offset
+    INSTRUCTION_GROUP_MEDIA, // Media Instructions
+    INSTRUCTION_GROUP_ARCH_UNDEFINED, // Architecturally Undefined
+    INSTRUCTION_GROUP_LOAD_STORE_MULTIPLE, // Load/Store Multiple registers
+    INSTRUCTION_GROUP_BRANCH, // Branch and Branch with Link
+    INSTRUCTION_GROUP_COPROC_LOAD_STORE_AND_DOUBLE_REG_TRANS, // Coprocessor Load/Store or Double Register Transfers
+    INSTRUCTION_GROUP_COPROC_DATA_PROC, // Coprocessor Data Processsing  
+    INSTRUCTION_GROUP_COPROC_REG_TRANS, // Coprocessor Data Transfers
+    INSTRUCTION_GROUP_SOFTWARE_INT, // Software Interrupt
+    INSTRUCTION_GROUP_UNCONDITIONAL, // Unconditional Instructions
 
-    UNKNOWN // This case should never be found
+    INSTRUCTION_GROUP_UNKNOWN // This case should never be found
 } INSTRUCTION_GROUP;
 
 // Data Processing (Register) Immediate Shift Instruction format
@@ -430,3 +447,42 @@ typedef struct {
 } InstructionWord;
 
 INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
+bool ARM7DMI_check_condition(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute(ARM7TDMI* cpu, InstructionWord inst);
+
+void ARM7DMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_data_proc_reg_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_misc_2_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_multiplies_ex_load_store_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_data_proc_imm_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_move_imm_to_stat_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_load_store_imm_offset_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_load_store_reg_offset_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_media_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_arch_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_load_store_mult_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_branch_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_coproc_load_store_and_double_reg_trans_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_coproc_data_proc_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_coproc_reg_trans_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_software_int_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7DMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord inst);
+
+void ARM7DMI_data_proc_and(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_eor(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_sub(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_add(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_adc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_tst(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_teq(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_orr(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_mov(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_bic(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7DMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
