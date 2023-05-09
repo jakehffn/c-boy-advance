@@ -3,6 +3,8 @@
 #include <stdint.h>
 #include <stdbool.h>
 
+#include "bit_manip.h"
+
 typedef struct {
     uint32_t registers[16];
     uint32_t fiq_registers[7];
@@ -450,39 +452,39 @@ INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
 bool ARM7DMI_check_condition(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7DMI_execute(ARM7TDMI* cpu, InstructionWord inst);
 
-void ARM7DMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_data_proc_reg_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_misc_2_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_multiplies_ex_load_store_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_data_proc_imm_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_move_imm_to_stat_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_load_store_imm_offset_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_load_store_reg_offset_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_media_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_arch_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_load_store_mult_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_branch_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_coproc_load_store_and_double_reg_trans_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_coproc_data_proc_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_coproc_reg_trans_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_software_int_instruction(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_data_proc_reg_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_misc_2_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_multiplies_ex_load_store_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_data_proc_imm_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_move_imm_to_stat_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_load_store_imm_offset_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_load_store_reg_offset_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_media_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_arch_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_load_store_mult_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_branch_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_coproc_load_store_and_double_reg_trans_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_coproc_data_proc_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_coproc_reg_trans_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_software_int_instruction(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord inst);
 
-void ARM7DMI_data_proc_and(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_eor(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_sub(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_add(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_adc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_tst(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_teq(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_orr(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_mov(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_bic(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7DMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+void ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);

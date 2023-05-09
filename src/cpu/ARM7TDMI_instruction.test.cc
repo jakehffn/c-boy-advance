@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 extern "C" {
-  #include "ARM7TDMI_instructions.h"
+  	#include "ARM7TDMI_instruction.h"
 }
 
 // DATA_PROC_IMM_SHIFT instructions
@@ -23,23 +23,29 @@ InstructionWord bcc_0xe600{0x3a00397e}; // bcc #0xe600
 InstructionWord b_n0xe600{0xeaffc67e}; // b #-0xe600
 
 TEST(cpu_decode_group, DATA_PROC_IMM_SHIFT) {
-  EXPECT_EQ(ARM7TDMI_decode_group(mov_r7_r5), INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT);
-  EXPECT_EQ(ARM7TDMI_decode_group(sub_r1_r0), INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT); 
-  EXPECT_EQ(ARM7TDMI_decode_group(add_r4_r5_r5_lsl_4), INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT); 
+	EXPECT_EQ(ARM7TDMI_decode_group(mov_r7_r5), INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT);
+	EXPECT_EQ(ARM7TDMI_decode_group(sub_r1_r0), INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT); 
+	EXPECT_EQ(ARM7TDMI_decode_group(add_r4_r5_r5_lsl_4), INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT); 
 }
 
 TEST(cpu_decode_group, DATA_PROC_REG_SHIFT) {
-  EXPECT_EQ(ARM7TDMI_decode_group(add_r4_r5_r5_lsl_r1), INSTRUCTION_GROUP_DATA_PROC_REG_SHIFT);
+  	EXPECT_EQ(ARM7TDMI_decode_group(add_r4_r5_r5_lsl_r1), INSTRUCTION_GROUP_DATA_PROC_REG_SHIFT);
 }
 
 TEST(cpu_decode_group, DATA_PROC_IMM) {
-  EXPECT_EQ(ARM7TDMI_decode_group(add_r0_0x42), INSTRUCTION_GROUP_DATA_PROC_IMM); 
-  EXPECT_EQ(ARM7TDMI_decode_group(mov_r7_0xff), INSTRUCTION_GROUP_DATA_PROC_IMM); 
-  EXPECT_EQ(ARM7TDMI_decode_group(teq_r7_0x7), INSTRUCTION_GROUP_DATA_PROC_IMM); 
+	EXPECT_EQ(ARM7TDMI_decode_group(add_r0_0x42), INSTRUCTION_GROUP_DATA_PROC_IMM); 
+	EXPECT_EQ(ARM7TDMI_decode_group(mov_r7_0xff), INSTRUCTION_GROUP_DATA_PROC_IMM); 
+	EXPECT_EQ(ARM7TDMI_decode_group(teq_r7_0x7), INSTRUCTION_GROUP_DATA_PROC_IMM); 
 }
 
 TEST(cpu_decode_group, BRANCH) {
-  EXPECT_EQ(ARM7TDMI_decode_group(b_0xc0), INSTRUCTION_GROUP_BRANCH); 
-  EXPECT_EQ(ARM7TDMI_decode_group(bcc_0xe600), INSTRUCTION_GROUP_BRANCH);
-  EXPECT_EQ(ARM7TDMI_decode_group(b_n0xe600), INSTRUCTION_GROUP_BRANCH); 
+	EXPECT_EQ(ARM7TDMI_decode_group(b_0xc0), INSTRUCTION_GROUP_BRANCH); 
+	EXPECT_EQ(ARM7TDMI_decode_group(bcc_0xe600), INSTRUCTION_GROUP_BRANCH);
+	EXPECT_EQ(ARM7TDMI_decode_group(b_n0xe600), INSTRUCTION_GROUP_BRANCH); 
+}
+
+ARM7TDMI cpu;
+
+TEST(cpu_execute_group, DATA_PROC_IMM) {
+	ARM7DMI_execute(&cpu, add_r0_0x42);
 }
