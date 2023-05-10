@@ -23,8 +23,8 @@ void (*instruction_group_func[])(ARM7TDMI* cpu, InstructionWord inst) = {
     [INSTRUCTION_GROUP_UNCONDITIONAL] = ARM7TDMI_execute_unconditional_instruction
 };
 
-void (*data_proc_func[])(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) = {
-    [DATA_PROC_OPCODE_ADC] = ARM7TDMI_data_proc_and,
+PSR (*data_proc_func[])(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand, bool S) = {
+    [DATA_PROC_OPCODE_AND] = ARM7TDMI_data_proc_and,
     [DATA_PROC_OPCODE_EOR] = ARM7TDMI_data_proc_eor,
     [DATA_PROC_OPCODE_SUB] = ARM7TDMI_data_proc_sub,
     [DATA_PROC_OPCODE_RSB] = ARM7TDMI_data_proc_rsb,
@@ -127,37 +127,44 @@ INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst) {
     }
 } 
 
-bool ARM7DMI_check_condition(ARM7TDMI* cpu, InstructionWord inst) {
+bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst) {
     
     switch(inst.decode_bits.cond) {
     case CONDITION_CODE_EQ:
-        return (cpu->flags & CPSR_FLAG_Z);
+        return (cpu->ps_registers[REGISTER_CPSR].Z);
     case CONDITION_CODE_NE:
-        return (!(cpu->flags & CPSR_FLAG_Z));
+        return (!(cpu->ps_registers[REGISTER_CPSR].Z));
     case CONDITION_CODE_CS_HS:
-        return (cpu->flags & CPSR_FLAG_C);
+        return (cpu->ps_registers[REGISTER_CPSR].C);
     case CONDITION_CODE_CC_LO:
-        return (!(cpu->flags & CPSR_FLAG_C));
+        return (!(cpu->ps_registers[REGISTER_CPSR].C));
     case CONDITION_CODE_MI:
-        return (cpu->flags & CPSR_FLAG_N);
+        return (cpu->ps_registers[REGISTER_CPSR].N);
     case CONDITION_CODE_PL:
-        return (!(cpu->flags & CPSR_FLAG_N));
+        return (!(cpu->ps_registers[REGISTER_CPSR].N));
     case CONDITION_CODE_VS:
-        return (cpu->flags & CPSR_FLAG_V);
+        return (cpu->ps_registers[REGISTER_CPSR].V);
     case CONDITION_CODE_VC:
-        return (!(cpu->flags & CPSR_FLAG_V));
+        return (!(cpu->ps_registers[REGISTER_CPSR].V));
     case CONDITION_CODE_HI:
-        return ((cpu->flags & CPSR_FLAG_C) && !(cpu->flags & CPSR_FLAG_Z));
+        return ((cpu->ps_registers[REGISTER_CPSR].C) 
+            && !(cpu->ps_registers[REGISTER_CPSR].Z));
     case CONDITION_CODE_LS:
-        return (!(cpu->flags & CPSR_FLAG_C) || (cpu->flags & CPSR_FLAG_Z));
+        return (!(cpu->ps_registers[REGISTER_CPSR].C) 
+            || (cpu->ps_registers[REGISTER_CPSR].Z));
     case CONDITION_CODE_GE:
-        return ((cpu->flags & CPSR_FLAG_N) == (cpu->flags & CPSR_FLAG_V));
+        return ((cpu->ps_registers[REGISTER_CPSR].N) 
+            == (cpu->ps_registers[REGISTER_CPSR].V));
     case CONDITION_CODE_LT:
-        return ((cpu->flags & CPSR_FLAG_N) != (cpu->flags & CPSR_FLAG_V));
+        return ((cpu->ps_registers[REGISTER_CPSR].N) 
+            != (cpu->ps_registers[REGISTER_CPSR].V));
     case CONDITION_CODE_GT:
-        return (!(cpu->flags & CPSR_FLAG_Z) && ((cpu->flags & CPSR_FLAG_N) == (cpu->flags & CPSR_FLAG_V)));
+        return (!(cpu->ps_registers[REGISTER_CPSR].Z) 
+            && ((cpu->ps_registers[REGISTER_CPSR].N) == (cpu->ps_registers[REGISTER_CPSR].V)));
     case CONDITION_CODE_LE:
-        return ((cpu->flags & CPSR_FLAG_Z) || ((cpu->flags & CPSR_FLAG_N) != (cpu->flags & CPSR_FLAG_V)));
+        return ((cpu->ps_registers[REGISTER_CPSR].Z) 
+            || ((cpu->ps_registers[REGISTER_CPSR].N) 
+            != (cpu->ps_registers[REGISTER_CPSR].V)));
     case CONDITION_CODE_AL:
         return true;
     default:
@@ -165,7 +172,7 @@ bool ARM7DMI_check_condition(ARM7TDMI* cpu, InstructionWord inst) {
     }
 }
 
-void ARM7DMI_execute(ARM7TDMI* cpu, InstructionWord inst) {
+void ARM7TDMI_execute(ARM7TDMI* cpu, InstructionWord inst) {
 
     if (ARM7DMI_check_condition(cpu, inst)) {
         (*instruction_group_func[ARM7TDMI_decode_group(inst)])(cpu, inst);
@@ -194,31 +201,39 @@ void ARM7TDMI_execute_multiplies_ex_load_store_instruction(ARM7TDMI* cpu, Instru
 
 void ARM7TDMI_execute_data_proc_imm_instruction(ARM7TDMI* cpu, InstructionWord inst) {
 
-    uint32_t rint = inst.data_proc_imm_instruction.immediate;
+    uint32_t shifter_operand = inst.data_proc_imm_instruction.immediate;
     unsigned int rotate = inst.data_proc_imm_instruction.rotate * 2;
     uint32_t carry;
 
-    bool isArithmetic = inst.data_proc_imm_instruction.opcode < 0b0010 || 
-        inst.data_proc_imm_instruction.opcode > 0b0111;
-
     // rotate right
     if (rotate != 0) {
-
-        rint = bit_manip_ROR(rint, rotate*2);
-
-        // If not an arithmetic operand, use the shift carry out
-        if (!isArithmetic) {
-            cpu->flags = bit_manip_set_mask(cpu->flags, CPSR_FLAG_C, rint >> 31);
-        }
+        shifter_operand = bit_manip_ROR(shifter_operand, rotate*2);
     }
 
-    (*data_proc_func[inst.data_proc_imm_instruction.opcode])(
+    PSR new_flags = (*data_proc_func[inst.data_proc_imm_instruction.opcode])(
         cpu, 
         inst.data_proc_imm_instruction.Rd, 
         inst.data_proc_imm_instruction.Rn,
-        rint,
+        shifter_operand,
         inst.data_proc_imm_instruction.S
     );
+
+    if (inst.data_proc_imm_instruction.S) {
+
+        if (inst.data_proc_imm_instruction.Rd == REGISTER_R15) {
+            // CPSR = SPSR for current mode
+        } else {
+            
+            // If the instruction is not an arithmetic instuction, the carry flag is set to the carry from the shifter
+            if (inst.data_proc_imm_instruction.opcode > 0b0111 || inst.data_proc_imm_instruction.opcode < 0b0010) {
+                if (rotate > 0) {
+                    new_flags.C = shifter_operand >> 31;
+                } 
+            }
+
+            cpu->ps_registers[REGISTER_CPSR] = new_flags;
+        }
+    }
 }
 
 void ARM7TDMI_execute_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst) {
@@ -273,66 +288,148 @@ void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord i
 
 }
 
-void ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
-    LOG("AND%s r%d, r%d, #%d\n", (S) ? "S" : "", dest, lint, rint);
+PSR ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("AND r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] & shifter_operand;
+
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("EOR r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] ^ shifter_operand;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("SUB r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] - shifter_operand;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    new_flags.C = cpu->registers[Rd] > shifter_operand;
+    new_flags.V = ((cpu->registers[Rn] ^ shifter_operand) & ~(cpu->registers[Rd] ^ shifter_operand)) >> 31;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("RSB r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = shifter_operand - cpu->registers[Rn];
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    new_flags.C = cpu->registers[Rd] > shifter_operand;
+    new_flags.V = ((cpu->registers[Rn] ^ shifter_operand) & ~(shifter_operand ^ cpu->registers[Rd])) >> 31;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
-    LOG("ADD%s r%d, r%d, #0x%x\n", (S) ? "S" : "", dest, lint, rint);
+PSR ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("ADD r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] + shifter_operand;
+
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    new_flags.C = cpu->registers[Rd] < shifter_operand;
+    new_flags.V = ((cpu->registers[Rd] ^ cpu->registers[Rn]) & (cpu->registers[Rd] ^ shifter_operand)) >> 31;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("ADC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] + shifter_operand + cpu->ps_registers[REGISTER_CPSR].C;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    new_flags.C = cpu->registers[Rd] < shifter_operand;
+    new_flags.V = ((cpu->registers[Rd] ^ cpu->registers[Rn]) & (cpu->registers[Rd] ^ shifter_operand)) >> 31;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("SBC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] - shifter_operand - ~cpu->ps_registers[REGISTER_CPSR].C;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    new_flags.C = cpu->registers[Rd] > shifter_operand;
+    new_flags.V = ((cpu->registers[Rn] ^ shifter_operand) & ~(cpu->registers[Rd] ^ shifter_operand)) >> 31;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("RSC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = shifter_operand - cpu->registers[Rn] - ~cpu->ps_registers[REGISTER_CPSR].C;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    new_flags.C = cpu->registers[Rd] > shifter_operand;
+    new_flags.V = ((cpu->registers[Rn] ^ shifter_operand) & ~(shifter_operand ^ cpu->registers[Rd])) >> 31;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
-
+PSR ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("TST r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
 }
 
-void ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
-
+PSR ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("TEQ r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
 }
 
-void ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
-
+PSR ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("CMP r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
 }
 
-void ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("CMN r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    uint32_t result = cpu->registers[Rn] + shifter_operand;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = result >> 31;
+    new_flags.Z = result == 0;
+    new_flags.C = result < shifter_operand;
+    new_flags.V = ((result ^ cpu->registers[Rn]) & (result ^ shifter_operand)) >> 31;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("ORR r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] | shifter_operand;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
-
+PSR ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("MOV r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = shifter_operand;
 }
 
-void ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
+PSR ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("BIC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = cpu->registers[Rn] & ~shifter_operand;
 
+    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    return new_flags;
 }
 
-void ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S) {
-
+PSR ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER Rd, REGISTER Rn, uint32_t shifter_operand) {
+    LOG("MVN r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
+    cpu->registers[Rd] = ~shifter_operand;
 }

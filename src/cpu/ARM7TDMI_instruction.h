@@ -5,15 +5,34 @@
 
 #include "bit_manip.h"
 
+// Program Status Register
 typedef struct {
-    uint32_t registers[16];
+    unsigned int M : 5; // Mode
+    unsigned int T : 1; // Thumb mode status
+    unsigned int F : 1; 
+    unsigned int I : 1;
+    unsigned int A : 1;
+    unsigned int E : 1;
+    unsigned int : 14;
+    unsigned int J : 1;
+    unsigned int : 2;
+    unsigned int Q : 1;
+    unsigned int V : 1;
+    unsigned int C : 1;
+    unsigned int Z : 1;
+    unsigned int N : 1;
+} PSR;
+
+typedef struct {
+    union {
+        uint32_t registers[22];
+        PSR ps_registers[22];
+    };
     uint32_t fiq_registers[7];
     uint32_t svc_registers[2];
     uint32_t abt_registers[2];
     uint32_t irq_registers[2];
     uint32_t und_registers[2];
-
-    uint32_t flags;
 
 } ARM7TDMI;
 
@@ -40,40 +59,18 @@ typedef enum {
     REGISTER_R14, //   R14_fiq, R14_svc, R14_abt, R14_irq, R14_und,
     REGISTER_R15,
 
+    REGISTER_CPSR,  // Current Program Status Register
+
+    REGISTER_SPSR_fiq, // Saved Program Status Registers
+    REGISTER_SPSR_svc,
+    REGISTER_SPSR_abt,
+    REGISTER_SPSR_irq,
+    REGISTER_SPSR_und,
+
     REGISTER_SP = 13,
     REGISTER_LR = 14,
     REGISTER_PC = 15
-    // CPSR,
-    // SPSR
-
-    // SPSR_fiq,
-    // SPSR_svc,
-    // SPSR_abt,
-    // SPSR_irq,
-    // SPSR_und,
 } REGISTER;
-
-typedef enum {
-    CPSR_FLAG_M0 = 1, // Mode Bits
-    CPSR_FLAG_M1 = 1 << 1,
-    CPSR_FLAG_M2 = 1 << 2,
-    CPSR_FLAG_M3 = 1 << 3,
-    CPSR_FLAG_M4 = 1 << 4,
-
-    CPSR_FLAG_T = 1 << 5, // State Bit (0=ARM, 1=THUMB)
-    CPSR_FLAG_F = 1 << 6, // FIQ disable (0=enable, 1=disable)
-    CPSR_FLAG_I = 1 << 7, // IRQ disable (0=enable, 1=disable)
-    CPSR_FLAG_A = 1 << 8, // Abort disable (1=Disable Imprecise Data Aborts)
-    CPSR_FLAG_E = 1 << 9, // Endian
-    // 10-23 reserved
-    CPSR_FLAG_J = 1 << 24, // Jazelle Mode (1=Jazelle Bytecode instructions)
-    // 25-26 reserved
-    CPSR_FLAG_Q = 1 << 27, // Sticky Overflow (1=Sticky Overflow)
-    CPSR_FLAG_V = 1 << 28, // Overflow Flag
-    CPSR_FLAG_C = 1 << 29, // Carry/Borrow Flag
-    CPSR_FLAG_Z = 1 << 30, // Zero Flag
-    CPSR_FLAG_N = 1 << 31  // Sign Flag
-} CPSR_FLAG;
 
 typedef enum {
     CONDITION_CODE_EQ, // Equal - Z set
@@ -119,7 +116,7 @@ typedef enum {
     INSTRUCTION_GROUP_MISC_1, // Miscellaneous group 1
     INSTRUCTION_GROUP_DATA_PROC_REG_SHIFT, // Data Processing (Register) Register Shift
     INSTRUCTION_GROUP_MISC_2, // Miscellaneous group 2
-    INSTRUCTION_GROUP_MULTIPLIES_OR_EX_LOAD_STORE, // Multiplies or Extra Loads/Stores   | These are the same in the documentation table
+    INSTRUCTION_GROUP_MULTIPLIES_OR_EX_LOAD_STORE, // Multiplies or Extra Loads/Stores
     INSTRUCTION_GROUP_DATA_PROC_IMM, // Data Processing Immediate
     INSTRUCTION_GROUP_UNDEFINED,
     INSTRUCTION_GROUP_MOVE_IMM_TO_STAT, // Move Immediate to Status Register
@@ -162,7 +159,6 @@ typedef struct {
     unsigned int : 3; // Must be 0b000
     CONDITION_CODE cond : 4;
 } Misc1Instruction;
-
 
 // Data Processing (Register) Register Shift Instruction format
 typedef struct {
@@ -449,8 +445,8 @@ typedef struct {
 } InstructionWord;
 
 INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
-bool ARM7DMI_check_condition(ARM7TDMI* cpu, InstructionWord inst);
-void ARM7DMI_execute(ARM7TDMI* cpu, InstructionWord inst);
+bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst);
+void ARM7TDMI_execute(ARM7TDMI* cpu, InstructionWord inst);
 
 void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst);
@@ -472,19 +468,19 @@ void ARM7TDMI_execute_coproc_reg_trans_instruction(ARM7TDMI* cpu, InstructionWor
 void ARM7TDMI_execute_software_int_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord inst);
 
-void ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
-void ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint, bool S);
+PSR ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);

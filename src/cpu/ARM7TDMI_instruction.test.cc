@@ -5,6 +5,7 @@ extern "C" {
 }
 
 // DATA_PROC_IMM_SHIFT instructions
+InstructionWord and_r9_0x42{0xe2099042}; // and r9, 0x42
 InstructionWord mov_r7_r5{0xe1a07005}; // mov r7, r5
 InstructionWord sub_r1_r0{0xe0411000}; // sub r1, r0 
 InstructionWord add_r4_r5_r5_lsl_4{0xe0854205}; // add r4, r5, r5, lsl #4
@@ -44,8 +45,17 @@ TEST(cpu_decode_group, BRANCH) {
 	EXPECT_EQ(ARM7TDMI_decode_group(b_n0xe600), INSTRUCTION_GROUP_BRANCH); 
 }
 
-ARM7TDMI cpu;
-
 TEST(cpu_execute_group, DATA_PROC_IMM) {
-	ARM7DMI_execute(&cpu, add_r0_0x42);
+
+	ARM7TDMI cpu;
+	cpu.registers[REGISTER_R9] = 0b1111;
+	ARM7TDMI_execute(&cpu, and_r9_0x42); // 0b1000010
+
+	EXPECT_EQ(cpu.registers[REGISTER_R9], 0b10);
+
+	ARM7TDMI_execute(&cpu, (InstructionWord){0xE3899062}); // orr r9, #98
+	ARM7TDMI_execute(&cpu, (InstructionWord){0xE3590062}); // cmp r9, #98
+	ARM7TDMI_execute(&cpu, (InstructionWord){0xE3190062}); // tst r9, #98
+	ARM7TDMI_execute(&cpu, (InstructionWord){0xE2099062}); // and r9, #98
+	ARM7TDMI_execute(&cpu, (InstructionWord){0xE0099005}); // and r9, r5
 }
