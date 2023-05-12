@@ -112,6 +112,13 @@ typedef enum {
 } DATA_PROC_OPCODE;
 
 typedef enum {
+    DATA_PROC_SHIFT_LSL,
+    DATA_PROC_SHIFT_LSR,
+    DATA_PROC_SHIFT_ASR,
+    DATA_PROC_SHIFT_ROR
+} DATA_PROC_SHIFT;
+
+typedef enum {
     INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT, // Data Processing (Register) Immediate Shift
     INSTRUCTION_GROUP_MISC_1, // Miscellaneous group 1
     INSTRUCTION_GROUP_DATA_PROC_REG_SHIFT, // Data Processing (Register) Register Shift
@@ -138,8 +145,8 @@ typedef enum {
 // Data Processing (Register) Immediate Shift Instruction format
 typedef struct {
     REGISTER Rm : 4;
-    unsigned int : 0; // Must be 0b0
-    unsigned int shift;
+    unsigned int : 1; // Must be 0b0
+    DATA_PROC_SHIFT shift : 2;
     unsigned int shift_amount : 5;
     REGISTER Rd : 4; // Destination register
     REGISTER Rn : 4; // First source operand register
@@ -164,7 +171,7 @@ typedef struct {
 typedef struct {
     REGISTER Rm : 4;
     unsigned int : 1; // Must be 0b1;
-    unsigned int shift : 2;
+    DATA_PROC_SHIFT shift : 2;
     unsigned int : 1; // Must be 0b0
     REGISTER Rs : 4;
     REGISTER Rd : 4; // Destination register
@@ -468,19 +475,19 @@ void ARM7TDMI_execute_coproc_reg_trans_instruction(ARM7TDMI* cpu, InstructionWor
 void ARM7TDMI_execute_software_int_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord inst);
 
-PSR ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
-PSR ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER dest, REGISTER lint, uint32_t rint);
+PSR ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
+PSR ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
