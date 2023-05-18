@@ -23,7 +23,7 @@ void (*instruction_group_func[])(ARM7TDMI* cpu, InstructionWord inst) = {
     [INSTRUCTION_GROUP_UNCONDITIONAL] = ARM7TDMI_execute_unconditional_instruction
 };
 
-PSR (*data_proc_func[])(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand, bool S) = {
+PSR (*data_proc_func[])(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) = {
     [DATA_PROC_OPCODE_AND] = ARM7TDMI_data_proc_and,
     [DATA_PROC_OPCODE_EOR] = ARM7TDMI_data_proc_eor,
     [DATA_PROC_OPCODE_SUB] = ARM7TDMI_data_proc_sub,
@@ -131,50 +131,144 @@ bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst) {
     
     switch(inst.decode_bits.cond) {
     case CONDITION_CODE_EQ:
-        return (cpu->ps_registers[REGISTER_CPSR].Z);
+        return (cpu->ps_registers[PS_REGISTER_CPSR].Z);
     case CONDITION_CODE_NE:
-        return (!(cpu->ps_registers[REGISTER_CPSR].Z));
+        return (!(cpu->ps_registers[PS_REGISTER_CPSR].Z));
     case CONDITION_CODE_CS_HS:
-        return (cpu->ps_registers[REGISTER_CPSR].C);
+        return (cpu->ps_registers[PS_REGISTER_CPSR].C);
     case CONDITION_CODE_CC_LO:
-        return (!(cpu->ps_registers[REGISTER_CPSR].C));
+        return (!(cpu->ps_registers[PS_REGISTER_CPSR].C));
     case CONDITION_CODE_MI:
-        return (cpu->ps_registers[REGISTER_CPSR].N);
+        return (cpu->ps_registers[PS_REGISTER_CPSR].N);
     case CONDITION_CODE_PL:
-        return (!(cpu->ps_registers[REGISTER_CPSR].N));
+        return (!(cpu->ps_registers[PS_REGISTER_CPSR].N));
     case CONDITION_CODE_VS:
-        return (cpu->ps_registers[REGISTER_CPSR].V);
+        return (cpu->ps_registers[PS_REGISTER_CPSR].V);
     case CONDITION_CODE_VC:
-        return (!(cpu->ps_registers[REGISTER_CPSR].V));
+        return (!(cpu->ps_registers[PS_REGISTER_CPSR].V));
     case CONDITION_CODE_HI:
-        return ((cpu->ps_registers[REGISTER_CPSR].C) 
-            && !(cpu->ps_registers[REGISTER_CPSR].Z));
+        return ((cpu->ps_registers[PS_REGISTER_CPSR].C) 
+            && !(cpu->ps_registers[PS_REGISTER_CPSR].Z));
     case CONDITION_CODE_LS:
-        return (!(cpu->ps_registers[REGISTER_CPSR].C) 
-            || (cpu->ps_registers[REGISTER_CPSR].Z));
+        return (!(cpu->ps_registers[PS_REGISTER_CPSR].C) 
+            || (cpu->ps_registers[PS_REGISTER_CPSR].Z));
     case CONDITION_CODE_GE:
-        return ((cpu->ps_registers[REGISTER_CPSR].N) 
-            == (cpu->ps_registers[REGISTER_CPSR].V));
+        return ((cpu->ps_registers[PS_REGISTER_CPSR].N) 
+            == (cpu->ps_registers[PS_REGISTER_CPSR].V));
     case CONDITION_CODE_LT:
-        return ((cpu->ps_registers[REGISTER_CPSR].N) 
-            != (cpu->ps_registers[REGISTER_CPSR].V));
+        return ((cpu->ps_registers[PS_REGISTER_CPSR].N) 
+            != (cpu->ps_registers[PS_REGISTER_CPSR].V));
     case CONDITION_CODE_GT:
-        return (!(cpu->ps_registers[REGISTER_CPSR].Z) 
-            && ((cpu->ps_registers[REGISTER_CPSR].N) == (cpu->ps_registers[REGISTER_CPSR].V)));
+        return (!(cpu->ps_registers[PS_REGISTER_CPSR].Z) 
+            && ((cpu->ps_registers[PS_REGISTER_CPSR].N) == (cpu->ps_registers[PS_REGISTER_CPSR].V)));
     case CONDITION_CODE_LE:
-        return ((cpu->ps_registers[REGISTER_CPSR].Z) 
-            || ((cpu->ps_registers[REGISTER_CPSR].N) 
-            != (cpu->ps_registers[REGISTER_CPSR].V)));
+        return ((cpu->ps_registers[PS_REGISTER_CPSR].Z) 
+            || ((cpu->ps_registers[PS_REGISTER_CPSR].N) 
+            != (cpu->ps_registers[PS_REGISTER_CPSR].V)));
     case CONDITION_CODE_AL:
         return true;
     default:
         return true;
     }
 }
+ 
+// Calculates the shifter operand and returns the carry flag
+PSR ARM7TDMI_calculate_shifter_op(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm) {
+
+    PSR shifter_carry_out;
+
+    switch (shift) {
+    case DATA_PROC_SHIFT_LSL:
+        if (shift_amount == 0) {
+            // Shifter Operand remains unchanged
+            shifter_carry_out.C = old_flags.C;
+        } else if (shift_amount < 32) {
+            *shifter_operand <<= shift_amount;
+            shifter_carry_out.C = *shifter_operand >> (32 - shift_amount);
+        } else if (shift_amount == 32) {
+            *shifter_operand = 0;
+            shifter_carry_out.C = *shifter_operand;
+        } else {
+            *shifter_operand = 0;
+            shifter_carry_out.C = 0;
+        }
+        break;
+    case DATA_PROC_SHIFT_LSR:
+        if (shift_amount == 0) {
+            // Shifter Operand remains unchanged
+            shifter_carry_out.C = old_flags.C;
+        } else if (shift_amount < 32) {
+            *shifter_operand >>= shift_amount;
+            shifter_carry_out.C = *shifter_operand >> (shift_amount - 1);
+        } else if (shift_amount == 32) {
+            *shifter_operand = 0;
+            shifter_carry_out.C = *shifter_operand >> 31;
+        } else {
+            *shifter_operand = 0;
+            shifter_carry_out.C = 0;
+        }
+        break;
+    case DATA_PROC_SHIFT_ASR:
+        if (shift_amount == 0) {
+            if (Imm) {
+                if ((*shifter_operand >> 31) == 0) {
+                    *shifter_operand = 0;
+                    shifter_carry_out.C = 0;
+                } else {
+                    *shifter_operand = 0xffffffff;
+                    shifter_carry_out.C = 1;
+                }
+            } else {
+                // Shifter Operand remains unchanged
+                shifter_carry_out.C = old_flags.C;
+            }
+        } else if (shift_amount < 32) {
+            *shifter_operand = bit_manip_ASR(*shifter_operand, shift_amount);
+            shifter_carry_out.C = *shifter_operand >> (shift_amount - 1);
+        } else {
+            if ((*shifter_operand >> 31) == 0) {
+                *shifter_operand = 0;
+                shifter_carry_out.C = 0;
+            } else {
+                *shifter_operand = 0xffffffff;
+                shifter_carry_out.C = 1;
+            }
+        }
+        break;
+    case DATA_PROC_SHIFT_ROR:
+        if (shift_amount == 0) {
+            if (Imm) {
+                // !TODO
+                // See "Data-processing operands - Rotate right with extend" on page A5-17
+            } else {
+                // Shifter Operand remains unchanged
+                shifter_carry_out.C = old_flags.C;
+            }
+        } else {
+            if (Imm) {
+                *shifter_operand = bit_manip_ASR(*shifter_operand, shift_amount);
+                shifter_carry_out.C = *shifter_operand >> (shift_amount - 1);
+            } else {
+                if ((shift_amount & 0b11111) == 0) {
+                    // Shifter Operand remains unchanged
+                    shifter_carry_out.C = *shifter_operand >> 31;
+                } else {
+                    *shifter_operand = bit_manip_ASR(*shifter_operand, (shift_amount & 0b11111));
+                    shifter_carry_out.C = *shifter_operand >> ((shift_amount & 0b11111) - 1);
+                }
+            }
+        }
+        break;
+    default:
+        break;
+    }
+
+    return shifter_carry_out;
+}
 
 void ARM7TDMI_execute(ARM7TDMI* cpu, InstructionWord inst) {
 
-    if (ARM7DMI_check_condition(cpu, inst)) {
+    if (ARM7TDMI_check_condition(cpu, inst)) {
         (*instruction_group_func[ARM7TDMI_decode_group(inst)])(cpu, inst);
     }
 }
@@ -184,32 +278,23 @@ void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, Instruction
     REGISTER Rm = inst.data_proc_imm_shift_instruction.Rm;
 
     uint32_t shifter_operand = cpu->registers[Rm] + (Rm == REGISTER_PC) ? 8 : 0;
-
-
-    REGISTER Rn = inst.data_proc_imm_shift_instruction.Rn;
-
-    PSR new_flags = (*data_proc_func[inst.data_proc_imm_shift_instruction.opcode])(
-        cpu, 
-        inst.data_proc_imm_shift_instruction.Rd, 
-        cpu->registers[Rn] + (Rn == REGISTER_PC) ? 8 : 0,
-        shifter_operand,
-        inst.data_proc_imm_shift_instruction.S
+    PSR shifter_carry_out = ARM7TDMI_calculate_shifter_op(
+        &shifter_operand, 
+        cpu->ps_registers[PS_REGISTER_CPSR],
+        inst.data_proc_imm_shift_instruction.shift, 
+        inst.data_proc_imm_shift_instruction.shift_amount,
+        true
     );
 
-    if (inst.data_proc_imm_shift_instruction.S) {
-
-        if (inst.data_proc_imm_shift_instruction.Rd == REGISTER_R15) {
-            // CPSR = SPSR for current mode
-        } else {
-            
-            // If the instruction is not an arithmetic instuction, the carry flag is set to the carry from the shifter
-            if (inst.data_proc_imm_shift_instruction.opcode > 0b0111 || inst.data_proc_imm_shift_instruction.opcode < 0b0010) {
-                // Use shifter carry out
-            }
-
-            cpu->ps_registers[REGISTER_CPSR] = new_flags;
-        }
-    }
+    ARM7TDMI_execute_data_proc_instruction(
+        cpu, 
+        inst.data_proc_imm_shift_instruction.opcode,
+        inst.data_proc_imm_shift_instruction.Rd,
+        inst.data_proc_imm_shift_instruction.Rn,
+        shifter_operand,
+        shifter_carry_out,
+        inst.data_proc_imm_shift_instruction.S
+    );
 }
 
 void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst) {
@@ -217,7 +302,27 @@ void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst) {
 }
 
 void ARM7TDMI_execute_data_proc_reg_shift_instruction(ARM7TDMI* cpu, InstructionWord inst) {
+    
+    REGISTER Rm = inst.data_proc_reg_shift_instruction.Rm;
 
+    uint32_t shifter_operand = cpu->registers[Rm] + (Rm == REGISTER_PC) ? 8 : 0;
+    PSR shifter_carry_out = ARM7TDMI_calculate_shifter_op(
+        &shifter_operand, 
+        cpu->ps_registers[PS_REGISTER_CPSR],
+        inst.data_proc_reg_shift_instruction.shift, 
+        inst.data_proc_reg_shift_instruction.Rs & 0xff,
+        false
+    );
+
+    ARM7TDMI_execute_data_proc_instruction(
+        cpu, 
+        inst.data_proc_reg_shift_instruction.opcode,
+        inst.data_proc_reg_shift_instruction.Rd,
+        inst.data_proc_reg_shift_instruction.Rn,
+        shifter_operand,
+        shifter_carry_out,
+        inst.data_proc_reg_shift_instruction.S
+    );
 }
 
 void ARM7TDMI_execute_misc_2_instruction(ARM7TDMI* cpu, InstructionWord inst) {
@@ -233,36 +338,22 @@ void ARM7TDMI_execute_data_proc_imm_instruction(ARM7TDMI* cpu, InstructionWord i
     uint32_t shifter_operand = inst.data_proc_imm_instruction.immediate;
     unsigned int rotate = inst.data_proc_imm_instruction.rotate * 2;
 
+    PSR shifter_carry_out = {.C = 0};
+
     if (rotate != 0) {
         shifter_operand = bit_manip_ROR(shifter_operand, rotate*2);
+        shifter_carry_out.C = shifter_operand >> 31;
     }
 
-    REGISTER Rn = inst.data_proc_imm_shift_instruction.Rn;
-
-    PSR new_flags = (*data_proc_func[inst.data_proc_imm_instruction.opcode])(
+    ARM7TDMI_execute_data_proc_instruction(
         cpu, 
-        inst.data_proc_imm_instruction.Rd, 
-        cpu->registers[Rn] + (Rn == REGISTER_PC) ? 8 : 0,
+        inst.data_proc_imm_instruction.opcode,
+        inst.data_proc_imm_instruction.Rd,
+        inst.data_proc_imm_shift_instruction.Rn,
         shifter_operand,
-        inst.data_proc_imm_instruction.S
+        shifter_carry_out,
+        inst.data_proc_imm_shift_instruction.S
     );
-
-    if (inst.data_proc_imm_instruction.S) {
-
-        if (inst.data_proc_imm_instruction.Rd == REGISTER_R15) {
-            // CPSR = SPSR for current mode
-        } else {
-            
-            // If the instruction is not an arithmetic instuction, the carry flag is set to the carry from the shifter
-            if (inst.data_proc_imm_instruction.opcode > 0b0111 || inst.data_proc_imm_instruction.opcode < 0b0010) {
-                if (rotate > 0) {
-                    new_flags.C = shifter_operand >> 31;
-                } 
-            }
-
-            cpu->ps_registers[REGISTER_CPSR] = new_flags;
-        }
-    }
 }
 
 void ARM7TDMI_execute_undefined_instruction(ARM7TDMI* cpu, InstructionWord inst) {
@@ -317,11 +408,37 @@ void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord i
 
 }
 
+void ARM7TDMI_execute_data_proc_instruction(ARM7TDMI* cpu, DATA_PROC_OPCODE opcode, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand, PSR shifter_carry_out, bool S) {
+
+    PSR new_flags = (*data_proc_func[opcode])(
+        cpu, 
+        Rd, 
+        cpu->registers[Rn] + (Rn == REGISTER_PC) ? 8 : 0,
+        shifter_operand
+    );
+
+    if (S) {
+
+        if (Rd == REGISTER_R15) {
+            // !TODO
+            // CPSR = SPSR for current mode
+        } else {
+            
+            // If the instruction is not an arithmetic instuction, the carry flag is set to the carry from the shifter
+            if (opcode > 0b0111 || opcode < 0b0010) {
+                new_flags.C = shifter_carry_out.C;
+            }
+
+            cpu->ps_registers[PS_REGISTER_CPSR] = new_flags;
+        }
+    }
+}
+
 PSR ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) {
     LOG("AND r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = Rn & shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     return new_flags;
@@ -331,7 +448,7 @@ PSR ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("EOR r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = Rn ^ shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     return new_flags;
@@ -341,7 +458,7 @@ PSR ARM7TDMI_data_proc_sub(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("SUB r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = Rn - shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     new_flags.C = cpu->registers[Rd] > shifter_operand;
@@ -353,7 +470,7 @@ PSR ARM7TDMI_data_proc_rsb(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("RSB r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = shifter_operand - Rn;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     new_flags.C = cpu->registers[Rd] > shifter_operand;
@@ -365,7 +482,7 @@ PSR ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("ADD r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = Rn + shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     new_flags.C = cpu->registers[Rd] < shifter_operand;
@@ -375,9 +492,9 @@ PSR ARM7TDMI_data_proc_add(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
 
 PSR ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) {
     LOG("ADC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
-    cpu->registers[Rd] = Rn + shifter_operand + cpu->ps_registers[REGISTER_CPSR].C;
+    cpu->registers[Rd] = Rn + shifter_operand + cpu->ps_registers[PS_REGISTER_CPSR].C;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     new_flags.C = cpu->registers[Rd] < shifter_operand;
@@ -387,9 +504,9 @@ PSR ARM7TDMI_data_proc_adc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
 
 PSR ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) {
     LOG("SBC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
-    cpu->registers[Rd] = Rn - shifter_operand - ~cpu->ps_registers[REGISTER_CPSR].C;
+    cpu->registers[Rd] = Rn - shifter_operand - ~cpu->ps_registers[PS_REGISTER_CPSR].C;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     new_flags.C = cpu->registers[Rd] > shifter_operand;
@@ -399,9 +516,9 @@ PSR ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
 
 PSR ARM7TDMI_data_proc_rsc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) {
     LOG("RSC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
-    cpu->registers[Rd] = shifter_operand - Rn - ~cpu->ps_registers[REGISTER_CPSR].C;
+    cpu->registers[Rd] = shifter_operand - Rn - ~cpu->ps_registers[PS_REGISTER_CPSR].C;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     new_flags.C = cpu->registers[Rd] > shifter_operand;
@@ -413,7 +530,7 @@ PSR ARM7TDMI_data_proc_tst(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("TST r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     uint32_t result = Rn & shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = result >> 31;
     new_flags.Z = result == 0;
     return new_flags;
@@ -423,7 +540,7 @@ PSR ARM7TDMI_data_proc_teq(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("TEQ r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     uint32_t result = Rn ^ shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = result >> 31;
     new_flags.Z = result == 0;
     return new_flags;
@@ -433,7 +550,7 @@ PSR ARM7TDMI_data_proc_cmp(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("CMP r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     uint32_t result = Rn - shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = result >> 31;
     new_flags.Z = result == 0;
     new_flags.C = result > shifter_operand;
@@ -445,7 +562,7 @@ PSR ARM7TDMI_data_proc_cmn(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("CMN r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     uint32_t result = Rn + shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = result >> 31;
     new_flags.Z = result == 0;
     new_flags.C = result < shifter_operand;
@@ -457,7 +574,7 @@ PSR ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     LOG("ORR r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = Rn | shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     return new_flags;
@@ -466,13 +583,18 @@ PSR ARM7TDMI_data_proc_orr(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
 PSR ARM7TDMI_data_proc_mov(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) {
     LOG("MOV r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = shifter_operand;
+    
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    return new_flags;
 }
 
 PSR ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) {
     LOG("BIC r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = Rn & ~shifter_operand;
 
-    PSR new_flags = cpu->ps_registers[REGISTER_CPSR];
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
     return new_flags;
@@ -481,4 +603,9 @@ PSR ARM7TDMI_data_proc_bic(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
 PSR ARM7TDMI_data_proc_mvn(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand) {
     LOG("MVN r%d, r%d, #%d\n", Rd, Rn, shifter_operand);
     cpu->registers[Rd] = ~shifter_operand;
+
+    PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
+    new_flags.N = cpu->registers[Rd] >> 31;
+    new_flags.Z = cpu->registers[Rd] == 0;
+    return new_flags;
 }

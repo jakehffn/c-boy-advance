@@ -7,27 +7,31 @@
 
 // Program Status Register
 typedef struct {
-    unsigned int M : 5; // Mode
-    unsigned int T : 1; // Thumb mode status
-    unsigned int F : 1; 
-    unsigned int I : 1;
-    unsigned int A : 1;
-    unsigned int E : 1;
-    unsigned int : 14;
-    unsigned int J : 1;
-    unsigned int : 2;
-    unsigned int Q : 1;
-    unsigned int V : 1;
-    unsigned int C : 1;
-    unsigned int Z : 1;
-    unsigned int N : 1;
+    union {
+        struct {
+            unsigned int M : 5; // Mode
+            unsigned int T : 1; // Thumb mode status
+            unsigned int F : 1; 
+            unsigned int I : 1;
+            unsigned int A : 1;
+            unsigned int E : 1;
+            unsigned int : 14;
+            unsigned int J : 1;
+            unsigned int : 2;
+            unsigned int Q : 1;
+            unsigned int V : 1;
+            unsigned int C : 1;
+            unsigned int Z : 1;
+            unsigned int N : 1;
+        };
+
+        uint32_t data;
+    };
 } PSR;
 
 typedef struct {
-    union {
-        uint32_t registers[22];
-        PSR ps_registers[22];
-    };
+    uint32_t registers[16];
+    PSR ps_registers[6];
     uint32_t fiq_registers[7];
     uint32_t svc_registers[2];
     uint32_t abt_registers[2];
@@ -36,11 +40,6 @@ typedef struct {
 
 } ARM7TDMI;
 
-// fiq - FIQ
-// svc - Supervisor
-// abt - Abort
-// irq - IRQ
-// und - Undefined
 typedef enum {
     REGISTER_R0,
     REGISTER_R1,
@@ -59,18 +58,25 @@ typedef enum {
     REGISTER_R14, //   R14_fiq, R14_svc, R14_abt, R14_irq, R14_und,
     REGISTER_R15,
 
-    REGISTER_CPSR,  // Current Program Status Register
-
-    REGISTER_SPSR_fiq, // Saved Program Status Registers
-    REGISTER_SPSR_svc,
-    REGISTER_SPSR_abt,
-    REGISTER_SPSR_irq,
-    REGISTER_SPSR_und,
-
     REGISTER_SP = 13,
     REGISTER_LR = 14,
     REGISTER_PC = 15
 } REGISTER;
+
+typedef enum {
+    PS_REGISTER_CPSR,  // Current Program Status Register
+
+    // fiq - FIQ
+    // svc - Supervisor
+    // abt - Abort
+    // irq - IRQ
+    // und - Undefined
+    PS_REGISTER_SPSR_fiq, // Saved Program Status Registers
+    PS_REGISTER_SPSR_svc,
+    PS_REGISTER_SPSR_abt,
+    PS_REGISTER_SPSR_irq,
+    PS_REGISTER_SPSR_und,
+} PS_REGISTER;
 
 typedef enum {
     CONDITION_CODE_EQ, // Equal - Z set
@@ -112,10 +118,10 @@ typedef enum {
 } DATA_PROC_OPCODE;
 
 typedef enum {
-    DATA_PROC_SHIFT_LSL,
-    DATA_PROC_SHIFT_LSR,
-    DATA_PROC_SHIFT_ASR,
-    DATA_PROC_SHIFT_ROR
+    DATA_PROC_SHIFT_LSL, // Logical Shift Left
+    DATA_PROC_SHIFT_LSR, // logical Shift Right
+    DATA_PROC_SHIFT_ASR, // Arithmetic  Shift Right
+    DATA_PROC_SHIFT_ROR // Rotate Right
 } DATA_PROC_SHIFT;
 
 typedef enum {
@@ -454,6 +460,7 @@ typedef struct {
 INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
 bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute(ARM7TDMI* cpu, InstructionWord inst);
+PSR ARM7TDMI_calculate_shifter_op(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm);
 
 void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst);
@@ -474,6 +481,8 @@ void ARM7TDMI_execute_coproc_data_proc_instruction(ARM7TDMI* cpu, InstructionWor
 void ARM7TDMI_execute_coproc_reg_trans_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_software_int_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord inst);
+
+void ARM7TDMI_execute_data_proc_instruction(ARM7TDMI* cpu, DATA_PROC_OPCODE opcode, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand, PSR shifter_carry_out, bool S);
 
 PSR ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
 PSR ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
