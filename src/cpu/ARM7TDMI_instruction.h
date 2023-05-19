@@ -460,7 +460,7 @@ typedef struct {
 INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
 bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute(ARM7TDMI* cpu, InstructionWord inst);
-PSR ARM7TDMI_calculate_shifter_op(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm);
+PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm);
 
 void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst);

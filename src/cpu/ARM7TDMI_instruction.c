@@ -173,88 +173,88 @@ bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst) {
 }
  
 // Calculates the shifter operand and returns the carry flag
-PSR ARM7TDMI_calculate_shifter_op(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm) {
+PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm) {
 
     PSR shifter_carry_out;
 
     switch (shift) {
     case DATA_PROC_SHIFT_LSL:
         if (shift_amount == 0) {
-            // Shifter Operand remains unchanged
             shifter_carry_out.C = old_flags.C;
+            // Shifter Operand remains unchanged
         } else if (shift_amount < 32) {
-            *shifter_operand <<= shift_amount;
             shifter_carry_out.C = *shifter_operand >> (32 - shift_amount);
+            *shifter_operand <<= shift_amount;
         } else if (shift_amount == 32) {
-            *shifter_operand = 0;
             shifter_carry_out.C = *shifter_operand;
-        } else {
             *shifter_operand = 0;
+        } else {
             shifter_carry_out.C = 0;
+            *shifter_operand = 0;
         }
         break;
     case DATA_PROC_SHIFT_LSR:
         if (shift_amount == 0) {
-            // Shifter Operand remains unchanged
             shifter_carry_out.C = old_flags.C;
+            // Shifter Operand remains unchanged
         } else if (shift_amount < 32) {
-            *shifter_operand >>= shift_amount;
             shifter_carry_out.C = *shifter_operand >> (shift_amount - 1);
+            *shifter_operand >>= shift_amount;
         } else if (shift_amount == 32) {
-            *shifter_operand = 0;
             shifter_carry_out.C = *shifter_operand >> 31;
-        } else {
             *shifter_operand = 0;
+        } else {
             shifter_carry_out.C = 0;
+            *shifter_operand = 0;
         }
         break;
     case DATA_PROC_SHIFT_ASR:
         if (shift_amount == 0) {
             if (Imm) {
                 if ((*shifter_operand >> 31) == 0) {
-                    *shifter_operand = 0;
                     shifter_carry_out.C = 0;
+                    *shifter_operand = 0;
                 } else {
-                    *shifter_operand = 0xffffffff;
                     shifter_carry_out.C = 1;
+                    *shifter_operand = 0xffffffff;
                 }
             } else {
-                // Shifter Operand remains unchanged
                 shifter_carry_out.C = old_flags.C;
+                // Shifter Operand remains unchanged
             }
         } else if (shift_amount < 32) {
-            *shifter_operand = bit_manip_ASR(*shifter_operand, shift_amount);
             shifter_carry_out.C = *shifter_operand >> (shift_amount - 1);
+            *shifter_operand = bit_manip_ASR(*shifter_operand, shift_amount);
         } else {
             if ((*shifter_operand >> 31) == 0) {
-                *shifter_operand = 0;
                 shifter_carry_out.C = 0;
+                *shifter_operand = 0;
             } else {
-                *shifter_operand = 0xffffffff;
                 shifter_carry_out.C = 1;
+                *shifter_operand = 0xffffffff;
             }
         }
         break;
     case DATA_PROC_SHIFT_ROR:
         if (shift_amount == 0) {
             if (Imm) {
-                // !TODO
-                // See "Data-processing operands - Rotate right with extend" on page A5-17
+                shifter_carry_out.C = *shifter_operand;
+                *shifter_operand = (old_flags.C << 31) | (*shifter_operand >> 1);
             } else {
-                // Shifter Operand remains unchanged
                 shifter_carry_out.C = old_flags.C;
+                // Shifter Operand remains unchanged
             }
         } else {
             if (Imm) {
-                *shifter_operand = bit_manip_ASR(*shifter_operand, shift_amount);
                 shifter_carry_out.C = *shifter_operand >> (shift_amount - 1);
+                *shifter_operand = bit_manip_ASR(*shifter_operand, shift_amount);
             } else {
                 if ((shift_amount & 0b11111) == 0) {
-                    // Shifter Operand remains unchanged
                     shifter_carry_out.C = *shifter_operand >> 31;
+                    // Shifter Operand remains unchanged
                 } else {
-                    *shifter_operand = bit_manip_ASR(*shifter_operand, (shift_amount & 0b11111));
                     shifter_carry_out.C = *shifter_operand >> ((shift_amount & 0b11111) - 1);
+                    *shifter_operand = bit_manip_ASR(*shifter_operand, (shift_amount & 0b11111));
                 }
             }
         }
@@ -278,7 +278,7 @@ void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, Instruction
     REGISTER Rm = inst.data_proc_imm_shift_instruction.Rm;
 
     uint32_t shifter_operand = cpu->registers[Rm] + (Rm == REGISTER_PC) ? 8 : 0;
-    PSR shifter_carry_out = ARM7TDMI_calculate_shifter_op(
+    PSR shifter_carry_out = ARM7TDMI_calculate_shifter_operand(
         &shifter_operand, 
         cpu->ps_registers[PS_REGISTER_CPSR],
         inst.data_proc_imm_shift_instruction.shift, 
@@ -306,7 +306,7 @@ void ARM7TDMI_execute_data_proc_reg_shift_instruction(ARM7TDMI* cpu, Instruction
     REGISTER Rm = inst.data_proc_reg_shift_instruction.Rm;
 
     uint32_t shifter_operand = cpu->registers[Rm] + (Rm == REGISTER_PC) ? 8 : 0;
-    PSR shifter_carry_out = ARM7TDMI_calculate_shifter_op(
+    PSR shifter_carry_out = ARM7TDMI_calculate_shifter_operand(
         &shifter_operand, 
         cpu->ps_registers[PS_REGISTER_CPSR],
         inst.data_proc_reg_shift_instruction.shift, 
