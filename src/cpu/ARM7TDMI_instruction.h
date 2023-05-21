@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string.h>
 #include <stdint.h>
 #include <stdbool.h>
 
@@ -37,6 +38,8 @@ typedef struct {
     uint32_t abt_registers[2];
     uint32_t irq_registers[2];
     uint32_t und_registers[2];
+
+    uint8_t* memory;
 
 } ARM7TDMI;
 
@@ -118,11 +121,11 @@ typedef enum {
 } DATA_PROC_OPCODE;
 
 typedef enum {
-    DATA_PROC_SHIFT_LSL, // Logical Shift Left
-    DATA_PROC_SHIFT_LSR, // logical Shift Right
-    DATA_PROC_SHIFT_ASR, // Arithmetic  Shift Right
-    DATA_PROC_SHIFT_ROR // Rotate Right
-} DATA_PROC_SHIFT;
+    SHIFT_LSL, // Logical Shift Left
+    SHIFT_LSR, // logical Shift Right
+    SHIFT_ASR, // Arithmetic  Shift Right
+    SHIFT_ROR // Rotate Right
+} SHIFT;
 
 typedef enum {
     INSTRUCTION_GROUP_DATA_PROC_IMM_SHIFT, // Data Processing (Register) Immediate Shift
@@ -152,7 +155,7 @@ typedef enum {
 typedef struct {
     REGISTER Rm : 4;
     unsigned int : 1; // Must be 0b0
-    DATA_PROC_SHIFT shift : 2;
+    SHIFT shift : 2;
     unsigned int shift_amount : 5;
     REGISTER Rd : 4; // Destination register
     REGISTER Rn : 4; // First source operand register
@@ -177,7 +180,7 @@ typedef struct {
 typedef struct {
     REGISTER Rm : 4;
     unsigned int : 1; // Must be 0b1;
-    DATA_PROC_SHIFT shift : 2;
+    SHIFT shift : 2;
     unsigned int : 1; // Must be 0b0
     REGISTER Rs : 4;
     REGISTER Rd : 4; // Destination register
@@ -285,8 +288,8 @@ typedef struct {
 // Load and Store Word or Unsigned Byte Instruction format
 typedef struct {
     REGISTER Rm : 4; // Offset register
-    unsigned int : 1; // Must be 0b1
-    unsigned int shift : 2;
+    unsigned int : 1; // Must be 0b0
+    SHIFT shift : 2;
     unsigned int shift_amount : 5; 
     REGISTER Rd : 4; // Source
     REGISTER Rn : 4; // Base register
@@ -458,9 +461,9 @@ typedef struct {
 } InstructionWord;
 
 INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst);
-bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst);
+bool ARM7TDMI_check_condition(ARM7TDMI* cpu, CONDITION_CODE cond);
 void ARM7TDMI_execute(ARM7TDMI* cpu, InstructionWord inst);
-PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm);
+PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags, SHIFT shift, uint32_t shift_amount, bool Imm);
 
 void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst);
@@ -482,7 +485,28 @@ void ARM7TDMI_execute_coproc_reg_trans_instruction(ARM7TDMI* cpu, InstructionWor
 void ARM7TDMI_execute_software_int_instruction(ARM7TDMI* cpu, InstructionWord inst);
 void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord inst);
 
-void ARM7TDMI_execute_data_proc_instruction(ARM7TDMI* cpu, DATA_PROC_OPCODE opcode, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand, PSR shifter_carry_out, bool S);
+void ARM7TDMI_execute_addressing_mode_1_instruction(
+    ARM7TDMI* cpu,
+    DATA_PROC_OPCODE opcode, 
+    REGISTER Rd, 
+    REGISTER Rn, 
+    uint32_t shifter_operand, 
+    PSR shifter_carry_out, 
+    bool S
+);
+
+void ARM7TDMI_execute_addressing_mode_2_instruction(
+    ARM7TDMI* cpu, 
+    REGISTER Rd, 
+    REGISTER Rn, 
+    size_t address_offset, 
+    bool P, 
+    bool U, 
+    bool B, 
+    bool W, 
+    bool L, 
+    CONDITION_CODE cond
+);
 
 PSR ARM7TDMI_data_proc_and(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);
 PSR ARM7TDMI_data_proc_eor(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand);

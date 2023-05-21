@@ -127,9 +127,9 @@ INSTRUCTION_GROUP ARM7TDMI_decode_group(InstructionWord inst) {
     }
 } 
 
-bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst) {
+bool ARM7TDMI_check_condition(ARM7TDMI* cpu, CONDITION_CODE cond) {
     
-    switch(inst.decode_bits.cond) {
+    switch(cond) {
     case CONDITION_CODE_EQ:
         return (cpu->ps_registers[PS_REGISTER_CPSR].Z);
     case CONDITION_CODE_NE:
@@ -173,12 +173,12 @@ bool ARM7TDMI_check_condition(ARM7TDMI* cpu, InstructionWord inst) {
 }
  
 // Calculates the shifter operand and returns the carry flag
-PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags, DATA_PROC_SHIFT shift, uint32_t shift_amount, bool Imm) {
+PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags, SHIFT shift, uint32_t shift_amount, bool Imm) {
 
     PSR shifter_carry_out;
 
     switch (shift) {
-    case DATA_PROC_SHIFT_LSL:
+    case SHIFT_LSL:
         if (shift_amount == 0) {
             shifter_carry_out.C = old_flags.C;
             // Shifter Operand remains unchanged
@@ -193,10 +193,15 @@ PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags,
             *shifter_operand = 0;
         }
         break;
-    case DATA_PROC_SHIFT_LSR:
+    case SHIFT_LSR:
         if (shift_amount == 0) {
-            shifter_carry_out.C = old_flags.C;
-            // Shifter Operand remains unchanged
+            if (Imm) {
+                shifter_carry_out.C = *shifter_operand >> 31;
+                *shifter_operand = 0;
+            } else {
+                shifter_carry_out.C = old_flags.C;
+                // Shifter Operand remains unchanged
+            }
         } else if (shift_amount < 32) {
             shifter_carry_out.C = *shifter_operand >> (shift_amount - 1);
             *shifter_operand >>= shift_amount;
@@ -208,7 +213,7 @@ PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags,
             *shifter_operand = 0;
         }
         break;
-    case DATA_PROC_SHIFT_ASR:
+    case SHIFT_ASR:
         if (shift_amount == 0) {
             if (Imm) {
                 if ((*shifter_operand >> 31) == 0) {
@@ -235,9 +240,10 @@ PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags,
             }
         }
         break;
-    case DATA_PROC_SHIFT_ROR:
+    case SHIFT_ROR:
         if (shift_amount == 0) {
             if (Imm) {
+                // RRX 
                 shifter_carry_out.C = *shifter_operand;
                 *shifter_operand = (old_flags.C << 31) | (*shifter_operand >> 1);
             } else {
@@ -267,13 +273,14 @@ PSR ARM7TDMI_calculate_shifter_operand(uint32_t* shifter_operand, PSR old_flags,
 }
 
 void ARM7TDMI_execute(ARM7TDMI* cpu, InstructionWord inst) {
-
-    if (ARM7TDMI_check_condition(cpu, inst)) {
-        (*instruction_group_func[ARM7TDMI_decode_group(inst)])(cpu, inst);
-    }
+    (*instruction_group_func[ARM7TDMI_decode_group(inst)])(cpu, inst);
 }
 
 void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, InstructionWord inst) {
+
+    if (!ARM7TDMI_check_condition(cpu, inst.data_proc_imm_shift_instruction.cond)) {
+        return;
+    }
 
     REGISTER Rm = inst.data_proc_imm_shift_instruction.Rm;
 
@@ -286,7 +293,7 @@ void ARM7TDMI_execute_data_proc_imm_shift_instruction(ARM7TDMI* cpu, Instruction
         true
     );
 
-    ARM7TDMI_execute_data_proc_instruction(
+    ARM7TDMI_execute_addressing_mode_1_instruction(
         cpu, 
         inst.data_proc_imm_shift_instruction.opcode,
         inst.data_proc_imm_shift_instruction.Rd,
@@ -302,6 +309,10 @@ void ARM7TDMI_execute_misc_1_instruction(ARM7TDMI* cpu, InstructionWord inst) {
 }
 
 void ARM7TDMI_execute_data_proc_reg_shift_instruction(ARM7TDMI* cpu, InstructionWord inst) {
+
+    if (!ARM7TDMI_check_condition(cpu, inst.data_proc_reg_shift_instruction.cond)) {
+        return;
+    }
     
     REGISTER Rm = inst.data_proc_reg_shift_instruction.Rm;
 
@@ -314,7 +325,7 @@ void ARM7TDMI_execute_data_proc_reg_shift_instruction(ARM7TDMI* cpu, Instruction
         false
     );
 
-    ARM7TDMI_execute_data_proc_instruction(
+    ARM7TDMI_execute_addressing_mode_1_instruction(
         cpu, 
         inst.data_proc_reg_shift_instruction.opcode,
         inst.data_proc_reg_shift_instruction.Rd,
@@ -335,6 +346,10 @@ void ARM7TDMI_execute_multiplies_ex_load_store_instruction(ARM7TDMI* cpu, Instru
 
 void ARM7TDMI_execute_data_proc_imm_instruction(ARM7TDMI* cpu, InstructionWord inst) {
 
+    if (!ARM7TDMI_check_condition(cpu, inst.data_proc_imm_instruction.cond)) {
+        return;
+    }
+
     uint32_t shifter_operand = inst.data_proc_imm_instruction.immediate;
     unsigned int rotate = inst.data_proc_imm_instruction.rotate * 2;
 
@@ -345,7 +360,7 @@ void ARM7TDMI_execute_data_proc_imm_instruction(ARM7TDMI* cpu, InstructionWord i
         shifter_carry_out.C = shifter_operand >> 31;
     }
 
-    ARM7TDMI_execute_data_proc_instruction(
+    ARM7TDMI_execute_addressing_mode_1_instruction(
         cpu, 
         inst.data_proc_imm_instruction.opcode,
         inst.data_proc_imm_instruction.Rd,
@@ -366,10 +381,49 @@ void ARM7TDMI_execute_move_imm_to_stat_instruction(ARM7TDMI* cpu, InstructionWor
 
 void ARM7TDMI_execute_load_store_imm_offset_instruction(ARM7TDMI* cpu, InstructionWord inst) {
 
+    size_t address = cpu->registers[inst.load_store_imm_offset_instruction.Rn];
+    uint32_t address_offset = inst.load_store_imm_offset_instruction.immediate;
+
+    ARM7TDMI_execute_addressing_mode_2_instruction(
+        cpu,
+        inst.load_store_imm_offset_instruction.Rd,
+        inst.load_store_imm_offset_instruction.Rn,
+        address_offset,
+        inst.load_store_imm_offset_instruction.P,
+        inst.load_store_imm_offset_instruction.U,
+        inst.load_store_imm_offset_instruction.B,
+        inst.load_store_imm_offset_instruction.W,
+        inst.load_store_imm_offset_instruction.L,
+        inst.load_store_imm_offset_instruction.cond
+    );
 }
 
 void ARM7TDMI_execute_load_store_reg_offset_instruction(ARM7TDMI* cpu, InstructionWord inst) {
 
+
+    size_t address = cpu->registers[inst.load_store_reg_offset_instruction.Rn];
+    uint32_t address_offset = cpu->registers[inst.load_store_reg_offset_instruction.Rm];
+
+    ARM7TDMI_calculate_shifter_operand(
+        &address_offset, 
+        (PSR) {},
+        inst.load_store_reg_offset_instruction.shift,
+        inst.load_store_reg_offset_instruction.shift_amount,
+        true
+    );
+
+    ARM7TDMI_execute_addressing_mode_2_instruction(
+        cpu,
+        inst.load_store_reg_offset_instruction.Rd,
+        inst.load_store_reg_offset_instruction.Rn,
+        address_offset,
+        inst.load_store_reg_offset_instruction.P,
+        inst.load_store_reg_offset_instruction.U,
+        inst.load_store_reg_offset_instruction.B,
+        inst.load_store_reg_offset_instruction.W,
+        inst.load_store_reg_offset_instruction.L,
+        inst.load_store_reg_offset_instruction.cond
+    );
 }
 
 void ARM7TDMI_execute_media_instruction(ARM7TDMI* cpu, InstructionWord inst) {
@@ -408,7 +462,16 @@ void ARM7TDMI_execute_unconditional_instruction(ARM7TDMI* cpu, InstructionWord i
 
 }
 
-void ARM7TDMI_execute_data_proc_instruction(ARM7TDMI* cpu, DATA_PROC_OPCODE opcode, REGISTER Rd, uint32_t Rn, uint32_t shifter_operand, PSR shifter_carry_out, bool S) {
+// Execute data processing instructions
+void ARM7TDMI_execute_addressing_mode_1_instruction(
+    ARM7TDMI* cpu, 
+    DATA_PROC_OPCODE opcode, 
+    REGISTER Rd, 
+    REGISTER Rn, 
+    uint32_t shifter_operand, 
+    PSR shifter_carry_out, 
+    bool S
+) {
 
     PSR new_flags = (*data_proc_func[opcode])(
         cpu, 
@@ -430,6 +493,59 @@ void ARM7TDMI_execute_data_proc_instruction(ARM7TDMI* cpu, DATA_PROC_OPCODE opco
             }
 
             cpu->ps_registers[PS_REGISTER_CPSR] = new_flags;
+        }
+    }
+}
+
+void ARM7TDMI_execute_addressing_mode_2_instruction(
+    ARM7TDMI* cpu, 
+    REGISTER Rd, 
+    REGISTER Rn, 
+    size_t address_offset, 
+    bool P, 
+    bool U, 
+    bool B, 
+    bool W, 
+    bool L,
+    CONDITION_CODE cond
+) {
+    
+    if (W && !P) {
+        // !TODO
+        // If W == 1, the instruction is LDRBT, LDRT, STRBT or STRT and an unprivileged (User mode) memory access is performed.
+    }
+
+    size_t address = cpu->registers[Rn];
+
+    if (P) {
+        if (U) {
+            address += address_offset;
+        } else {
+            address -= address_offset;
+        }
+    }
+
+    if ((W && ARM7TDMI_check_condition(cpu, cond)) || (!W && !P && ARM7TDMI_check_condition(cpu, cond))) {
+        if (U) {
+            cpu->registers[Rn] += address_offset;
+        } else {
+            cpu->registers[Rn] -= address_offset;
+        }
+    }
+
+    // Distinguishes between an unsigned byte (B == 1) and a word (B == 0) access
+    if (B) {
+        // Distinguishes between a Load (L == 1) and a Store (L == 0)
+        if (L) {
+            cpu->registers[Rd] = cpu->memory[address];
+        } else {
+            cpu->memory[address] = cpu->registers[Rd];
+        }
+    } else {
+        if (L) {
+            memcpy(cpu->registers + Rd, cpu->memory + address, sizeof(uint32_t));
+        } else {
+            memcpy(cpu->memory + address, cpu->registers + Rd, sizeof(uint32_t));
         }
     }
 }
