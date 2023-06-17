@@ -625,8 +625,8 @@ PSR ARM7TDMI_data_proc_sbc(ARM7TDMI* cpu, REGISTER Rd, uint32_t Rn, uint32_t shi
     PSR new_flags = cpu->ps_registers[PS_REGISTER_CPSR];
     new_flags.N = cpu->registers[Rd] >> 31;
     new_flags.Z = cpu->registers[Rd] == 0;
-    new_flags.C = cpu->registers[Rd] > shifter_operand;
-    new_flags.V = ((Rn ^ shifter_operand) & ~(cpu->registers[Rd] ^ shifter_operand)) >> 31;
+    new_flags.C = (shifter_operand + ~cpu->ps_registers[PS_REGISTER_CPSR].C) > Rn;
+    new_flags.V = ((Rn ^ shifter_operand) & (Rn ^ cpu->registers[Rd])) >> 31;
     return new_flags;
 }
 
