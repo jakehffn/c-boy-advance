@@ -1,8 +1,8 @@
-# CBoyAdvanced
+# CBoyAdvance
 
-**A C/WASM GameBoy Advanced (GBA) emulator**
+**A C/WASM GameBoy Advance (GBA) emulator**
 
-This is an emulator for the GameBoy Advanced. It can be built natively or to a WASM target using Emscripten.
+This is an emulator for the GameBoy Advance. It can be built natively or to a WASM target using Emscripten.
 
 
 ## ⚠️WORK IN-PROGRESS⚠️
